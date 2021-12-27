@@ -6,6 +6,7 @@
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{amsthm}
+\usepackage{hyphenat}
 
 \graphicspath{ {./images/} }
 \DeclareMathOperator*{\E}{\mathbb{E}}
@@ -68,7 +69,12 @@ Betreuer: Prof.\ Dr.\ Vorname Nachname
 
 In der vorgelegten Abschlussarbeit untersuchen wir ...
 
+\pagebreak
+\section{Spoken Dialog System}
+A spoken dialogue system is a computer system that enables human computer interaction where primary input is speech. Examples of such systems are voice assistants, chatbots, and conversational interfaces (Siri, Alexa, Google Home, etc.). \par
 
+A good spoken dialogue system has the following properties: understands the user, decides what to say back, conducts a conversation beyond simple vo\-ice commands or question answering. 
+In this overview we will be considering a goal-oriented systems (the ones which are targeted to accomplish a goal in the context of a task - to book a restaurant for ex.). In this case the scope of the conversation is usually limited to a specific domain - a database contating all knowledge about the topic. Such database is called an ontology.
 \pagebreak
 \section{Task 2 Semantic Decoding}
 Semantic decoding translates sentences into the set of sematic concepts, which consists of 2 parts: intent (or dialog act type) and sematic slots and values. For instance the sentence "I want to book a flight to Berlin" can be translated into the intent "book" and the slots "flight" and "to" with the value "Berlin"($book(flight, to(Berlin))$).
@@ -82,6 +88,65 @@ There are different ways of how we can evaluate such model. But first, having a 
 On the other hand, we can calculate accuracy directly on the predicted sequence of tags, without converting it to slots. In this case we keep the mapping of each tag to 3 counters for TP, FP and FN. After that there are 2 options on how to average the metrics. On a macro level, we first calculate precision, recall and f1-score for each of the tags, then we average these metrics across all tags. On a micro level we do the weighted average, so for ex. to calculate precision we divide the sum of all TP by the sum of all TP+FP of all tags. 
 
 Macro average can be much lower than a weighted average, because there can be a lot of rare classes with few instances which were not predicted or predicted wrongly while there are not so many classes with a lot of instances, which are therefore predicted correctly.
+
+Let's have a look on how the tags are recognised after training. 
+\begin{center}
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{ c c c c c c c c c c c c c }
+        & find & a & flight & from & tampa & to & montreal & by & way & of & new & york
+        \\ 
+        predicted & O & O & O & O & B-fromloc.city\_name & O & B-toloc.city\_name & O & O & O & B-fromloc.city\_name & I-fromloc.city\_name
+        \\ 
+        true & O & O & O & O & B-fromloc.city\_name & O & B-toloc.city\_name & O & O & O & B-stoploc.city\_name & I-stoploc.city\_name \\  
+    \end{tabular}}
+\end{center}
+
+We can fix it by adding words "with a stop in".
+\begin{center}
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{ c c c c c c c c c c c c c c}
+        & find & a & flight & from & tampa & to & montreal & with & a & stop & in & new & york
+        \\ 
+        predicted & O & O & O & O & B-fromloc.city\_name & O & B-toloc.city\_name & O & O & O & O & B-stoploc.city\_name & I-stoploc.city\_name  
+    \end{tabular}}
+\end{center}
+
+There are also many instances when the state name is recognized as a city name. 
+\begin{center}
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{ c c c c c c c c c c c}
+        & please & find & a & flight & from & las & vegas & to & michigan
+        \\ 
+        predicted & O & O & O & O & O & B-fromloc.city\_name & I-fromloc.city\_name &  O & B-toloc.city\_name
+        \\ 
+        true & O & O & O & O & O & B-fromloc.city\_name & I-fromloc.city\_name &  O & B-toloc.state\_name \\  
+    \end{tabular}}
+\end{center}
+
+Arrival time can be mistaken with departing time:
+\begin{center}
+    \scalebox{0.7}{
+    \begin{tabular}{ c c c c c}
+        Sentence & True & Predicted & Changes & New prediction\\
+        i &O&O & i & O\\
+        would &O&O & would & O\\
+        like  &O&O & like & O\\
+        to &O& O & to & O\\
+        return &O& O & fly& O\\
+        from &O& O & around & B-depart\_time.time\_relative\\
+        chicago &B-fromloc.city\_name& B-fromloc.city\_name & 7 & B-depart\_time.time\\
+        around &B-depart\_time.time\_relative& B-depart\_time.time\_relative & in & O\\
+        7 &B-depart\_time.time& B-depart\_time.time & the & O\\
+        pm &I-depart\_time.time& I-arrive\_time.time & evening & B-depart\_time.period\_of\_day\\
+        to &O& O & from & O\\
+        kansas  &B-toloc.city\_name& B-toloc.city\_name & chicago & B-fromloc.city\_name\\
+        city &I-toloc.city\_name& I-toloc.city\_name & to & O \\
+        &&&kansas & B-toloc.city\_name\\
+        &&& city & I-toloc.city\_name\\
+    \end{tabular}}
+\end{center}
+
+We can fix wrongly recognized "pm" by adding - in the evening.
 %===========================================================
 \section{Task 3}
 Focus tracker accumulates evidence of a changing state over the course of the dialogue. Let's define for methods and goal components $c \in V_c$ (all possible slot values) the quantity denoting that a slot(method) is not present in turn $t$:
