@@ -75,6 +75,12 @@ A spoken dialogue system is a computer system that enables human computer intera
 
 A good spoken dialogue system has the following properties: understands the user, decides what to say back, conducts a conversation beyond simple vo\-ice commands or question answering. 
 In this overview we will be considering a goal-oriented systems (the ones which are targeted to accomplish a goal in the context of a task - to book a restaurant for ex.). In this case the scope of the conversation is usually limited to a specific domain - a database contating all knowledge about the topic. Such database is called an ontology.
+\par
+One of the straightforward and old approaches to create such a system is rule-base model. However such models of course require to handcraft a lot of rules, don't keep track of what has already happend in the dialog and therefore are not prone to annoying repetitive behaviour. And here machine learning approaches come in handy. \par
+
+System is usually split into modules each responsible for a specific task with well defined input and output, for each a machine learning algorithm can be used. Spoken language understanding (SLU), Dialogue management (DM), Spoken language generation (SLG). \par
+\includegraphics[width=\linewidth]{SDS-main.png}
+
 \pagebreak
 \section{Task 2 Semantic Decoding}
 Semantic decoding translates sentences into the set of sematic concepts, which consists of 2 parts: intent (or dialog act type) and sematic slots and values. For instance the sentence "I want to book a flight to Berlin" can be translated into the intent "book" and the slots "flight" and "to" with the value "Berlin"($book(flight, to(Berlin))$).
