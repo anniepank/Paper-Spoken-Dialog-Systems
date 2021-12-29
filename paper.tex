@@ -78,16 +78,65 @@ In this overview we will be considering a goal-oriented systems (the ones which 
 \par
 One of the straightforward and old approaches to create such a system is rule-base model. However such models of course require to handcraft a lot of rules, don't keep track of what has already happend in the dialog and therefore are not prone to annoying repetitive behaviour. And here machine learning approaches come in handy. \par
 
-System is usually split into modules each responsible for a specific task with well defined input and output, for each a machine learning algorithm can be used. Spoken language understanding (SLU), Dialogue management (DM), Spoken language generation (SLG). \par
+System is usually split into modules each responsible for a specific task with well defined input and output, for each a machine learning algorithm can be used. Spoken language understanding (SLU), Dialogue management (DM), Spoken language generation (SLG). Modular approach has a downside of loosing information between the modules, for example if we have recognised speech incorrectly all following steps will be failed, however ML approaches allow to consider a list of possible inputs scored by their probability, and therefor uncertainty is propagated through the pipeline. \par
 \includegraphics[width=\linewidth]{SDS-main.png}
+
+Both semantic decoding and natural language generation depend on the ontology. Dialogue manager in addition needs to query the ontology to be able to provide an adequate response.
+
+\subsection{Word represeantions}
+To match user utterances with the ontology concepts we either have to either handcode all of the possible user utterances (which is completely uproductive in the constantly changing language and doesn't scale well), or learn their representation implicitely. For instance using a distri\-butional approach by encoding words into vectors, which can be learned statistically from the corpus of many texts. One can learn static representation with such statistical methods as word2vec, GloVe, fastText (uses n-grams) or contextualized neural language models such as ELMo, BERT etc.
+
+\par
+With static word respresentation one can have a meaningfull distance metric, cosine similarity for ex.: the closer the word vectors are - the more similar meaning they have.
+
+\begin{equation}
+    cos(w_i,w_j) = \frac{w_i^T \cdot w_j}{||w_i|| \cdot ||w_j||}
+\end{equation}
+
+With this approach one can get examples like: $w$("queen") = $w$("king") - $w$("man") + $w$("women")
+\par
+
+\pagebreak
+
+\section{SLU. Speech recognition}
+Speech recognition might be complicated by differences in speakers, environ\-mental noises, divestiry of vocabulary and so on. Uncertanties in recognition brought by these factors shoulbe be propagated through the pipeline so that information is not lost after the SLU module because of the wrong recognition.
+\begin{center}
+    \includegraphics{training-1.png}
+\end{center}
+\par 
+There is not straightforward way to convert speech into text - think for example about how to detect when user stars or ends speaking?
+\par Recognition usually doesn't assume the speech being represented in words only, but it works in the hiranhical way: utterance $\Rightarrow$ words $\Rightarrow$ subwords(pho\-nemes, triphones) $\Rightarrow$ 3 senones. By subwords we understand the phonemes, by triphones that one can find the in dictionary. 3 senones represent a subwords unit - specifically its beginning, middle and end.
+
+\begin{center}
+    \includegraphics[width=\linewidth]{hierarcy-speech.png}
+\end{center}
+
+Because we have to align labels in trainging and during recognition the task is to find the most matching sequence from all possible ones we can well apply a HMM model here. Each phone is modeled with 3 states. The sequence of senones is a sequence of states for HMM. Each state of an HMM generates a feature vector of a frame. Before pure GMM were applied to solve these problems, afterwards deep learnining came into play hybrid HMM-DNN models appeared. There also exist end-to-end transformer models which train from sequence of phones and produce a sequence of frames.
 
 \pagebreak
 \section{Task 2 Semantic Decoding}
-Semantic decoding translates sentences into the set of sematic concepts, which consists of 2 parts: intent (or dialog act type) and sematic slots and values. For instance the sentence "I want to book a flight to Berlin" can be translated into the intent "book" and the slots "flight" and "to" with the value "Berlin"($book(flight, to(Berlin))$).
+Semantic decoding translates utterances into the set of sematic concepts (dia\-log acts), which consists of 2 parts: intent (or dialog act type) and sematic slots and values. For instance the sentence "I want to book a flight to Berlin" can be translated into the intent "book" and the slots "flight" and "to" with the value "Berlin"($book(flight, to(Berlin))$).
 
-To do this we first need to translate a sentence into a sequence of tags, for ex. "I want to fly from Minsk to Kiev round trip tomorrow" can be translated into the sequence of tags: ["O", "O", "O", "O", "O", "B-fromloc.city\_name", "O", "B-toloc.city\_name", "B-round\_trip", "I-round\_trip", "B-departure\_date"].
+We can view this as a classification task: having probability for each act type and each slot-value pair.
+\begin{center}
+    \includegraphics[width=\linewidth]{training-2.png}
+\end{center}
+Utterances for classification task can be represented as a fixed-size vector with the bag-of-words model. Where we preserve only information about which and how many words are there. To keep the word order information additionally one can use an n-gram model. We can also use delexicalisation to cluster special terms as <area> or <food-type> with the help of ontology in advance. Then several SVMs are trained to classify possible dialog acts (see image below).
+\begin{center}
+    \includegraphics[width=\linewidth]{semantic-decoding-classification.png}
+\end{center}
 
-In order to do this, we can keep two dictionaries (one for words and one for tags), which will map each word (tag) to a unique integer. We can then use these dictionaries to translate the sequence of words and a sequence of tags into a sequence of integers. Then we can train a model to predict from the sequence of integers a corresponding sequence of tags. This can be a simple RNN with two heads - one for predicting the tags and another for predicting intent. 
+We also consider several possible utterances (see image).
+\begin{center}
+    \includegraphics{uncertanty.png}
+\end{center}
+
+We can view this as a seq-to-seq task: translating an utterance into a sequence of tags, for ex. "I want to fly from Minsk to Kiev round trip tomorrow" can be translated into the sequence of tags: ["O", "O", "O", "O", "O", "B-fromloc.city\_name", "O", "B-toloc.city\_name", "B-round\_trip", "I-round\_trip", "B-departure\_date"].
+\begin{center}
+    \includegraphics[width=\linewidth]{training-2-2.png}
+\end{center}
+
+In order to do this, we can keep two dictionaries (one for words and one for tags), which will map each word (tag) to a unique integer. We can then use these dictionaries to translate the sequence of words and a sequence of tags into a sequence of integers. Then we can train a model to predict from the sequence of integers a corresponding sequence of tags. This can be a simple RNN with two heads - one for predicting the tags and another for predicting intent. One can also use conditional random fields (CRF) instead.
 
 There are different ways of how we can evaluate such model. But first, having a sequence of tags, we can convert it to a set of slots in the following way: input = [B-food-type I\_food-type O B\_price-range O], output = [(food-type, start=0, end=1), (price-range, start=3, end=3)]. Then having a set of true and predicted slots we can compare them on the slot level: if predicted slot was in true slots, then this is a true positive. If predicted slot was not in true slots, then this is a false positive. If true slot was not in predicted slots, then this is a false negative. Then from these values, we can calculate precision, recall and F1 score.
 
