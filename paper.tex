@@ -203,8 +203,37 @@ Arrival time can be mistaken with departing time:
 
 We can fix wrongly recognized "pm" by adding - in the evening.
 %===========================================================
-\section{Task 3}
-Focus tracker accumulates evidence of a changing state over the course of the dialogue. Let's define for methods and goal components $c \in V_c$ (all possible slot values) the quantity denoting that a slot(method) is not present in turn $t$:
+\section{Dialog state tracking}
+Dialog state tracker remembers everything that has happend in the dialog and that is important for this dialog. Dialog management problem can be solved with a generative model with the use of Markov decision process.
+
+\begin{center}
+    \includegraphics[width=\linewidth]{training-state-tr-1.png}
+\end{center}
+
+Process is represented with a dynamic baysian network of states that contain all important information about the dialog so far, actions are what system does and rewards - measures of how good the dialog is so far.
+
+\begin{figure}[!htb]
+    \minipage{0.27\textwidth}
+      \includegraphics[width=\linewidth]{markov.png}
+      \caption{Markov}
+    \endminipage\hfill
+    \minipage{0.26\textwidth}
+      \includegraphics[width=\linewidth]{partial-markov.png}
+      \caption{Partial Markov}
+    \endminipage\hfill
+    \minipage{0.46\textwidth}
+      \includegraphics[width=\linewidth]{state-split.png}
+      \caption{State Split}
+    \endminipage\hfill
+\end{figure}
+
+To introduce the uncertainty here, we can say that the utterances that we observe are not actual states, but that the observations (utterances) we see, and that they are dependent on the state, then the states will be only partially observed and the process is called then partially observable markov process and there is a tractable approximations for it called HIS. It works with n-best list of utterances(observed states) and decomposes a state into user goal, user action and dialog history parts.
+
+In generative models we assume that the features between subsequent turns are conditionally independent given the underlying states, but we can model directly dependence of states on the observed features which can be correlated between the turns. This approach is called discriminative model.
+
+The dialogue state then consists of three components - goal (for each slot a distribution over possible values), method (a distribution over possible methods), and requested slots (for each requestable slot a binary distribution - wether it was requested or not).
+\par
+Simple tracker might take the most probably state, but one can build a cocus tracker that accumulates evidence of a changing state over the course of the dialogue. Let's define for methods and goal components $c \in V_c$ (all possible slot values) the quantity denoting that a slot(method) is not present in turn $t$:
 
 \begin{equation}
     \label{eqn:q_c_t}
@@ -305,8 +334,14 @@ Focus tracker accumulates evidence of a changing state over the course of the di
     \end{equation}
 \end{proof}
 
-\subsection{Exercise 3}
-Focus tracker performes much better for the informable slots. This is an expected behaviour as informable slot may change over time, and the probability of the slot being informable will change over time. However for the requestable slot focus tracker doesn't show a better performance and usually the requestable slots do not change during the dialog, they are requested once and after that removed from the set of the requestable slots. The same applied for the methods, performance there is the similar to the baseline tracker as user only once "sets" by which method he wants to achieve the goal.
+\subsection{Exercise 3 Quality Evaluation}
+To evaluate the quality of a belief state tracker one can use accuracy as a fraction of turns where the top dialogue state hypothesis is correct or an l2-norm of the hypothesised distribution $p$ and the true label, where $i$ is index of the true label. 
+\begin{center}
+    \begin{equation}
+        L_2 = (1-p_i)^2 + \sum_{j \neq i} p_j^2
+    \end{equation}
+\end{center}
+Focus tracker performes much better for the informable slots. This is an expected behaviour as informable slot may change over time, and the probabi\-lity of the slot being informable will change over time. However for the requestable slot focus tracker doesn't show a better performance and usually the requestable slots do not change during the dialog, they are requested once and after that removed from the set of the requestable slots. The same applied for the methods, performance there is the similar to the baseline tracker as user only once "sets" by which method he wants to achieve the goal.
 
 \subsection{Exercise 4}
 What happens to a probability if a user gives the exact same utterance in
@@ -360,27 +395,66 @@ and
 
 \noindent In general, such rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a totally reasonable update. 
 
+\section{Better models}
+It is also possible to skip semantic decoding module and predict dialog acts directly from the transcribed speech. One doesn't have to label the utterances in this case, however dexelicalisation is still needed and it is the main accuracy gainer for such methods. And it requires a semantic dictionary for all values from ontology, which is also difficult to obtain in practice.
 
-\section{Monte-Carlo policy}
+Delexicalision can be done with word-vector embedding, as for. example similar words are used in similar contexts as well as antonyms (south, north, etc.). However contextual embedding performs even better for state tracking (when the vector embedding of the word depens on the sentence it is used in). This can be obtained with the transformer model. Self-attention layers in transformers relate different parts of the input sequence to produce a better representation for it. Multihead attention can replace delexicalisation as it compares the input sequence to possible slot values. With fine-tuned model like BERT (Bidirectional Encoder Representations from Transformers) 
 
-Monte Carlo control algorithm is a method for finding the optimal policy for a reinforcement problem.
+\section{Dialog state tracking as a reinforcement learning problem}
+Depending on the output of the state tracker, the agent can learn to perform the correct action. This is a reinforcement learning problem, where the agent is rewarded for performing the correct action. The agent can also be penalised for performing the incorrect action - like too long dialog for instance. It has the policy (its behaviour that) that it has to optimize, rewards from the environment, value function (prdiction of the future reward given current state) and model of the environment.
 
-\noindent It is a tabular approach, which means that the belief state/summary space is discretised into a grid. In this algorithm the policy and the Q function are first defined randomly. Then we iterate over the dialogs with this polilcy. Throught this iteration we calculate the reward until the end of the dialog. For updating the state we choose the nearest state from the table and update the Q value and afterwards the policy with it, then in the next turn we will use an already updated policy. 
-
-\begin{center}
-    \includegraphics[width=10cm]{MCC.png}
-\end{center}
-It is a value-based algorithm, which means that it is based on the value of the state-action pairs. It is also a model-free method as it does not require any knowledge of the environment. And finally it is a on-policy as we use the current best estimate of the policy to guide the agent. And policy is updated iteratively until we find the optimal one. Regarding the exploration, it is a greedy method as we sometimes choose the action with the highest value, and sometimes pick a random one.
 
 \subsection{Why do we define a reward?}
 
-Reward is a measure of the success of the policy for the dialog, if we don’t have a reward, we cannot learn and define an optimal policy. With it we can define how we optimize the policy by optimizing the value of the reward. It is basically a metric for the algorithm's success.
+Reward is a measure of the success of the policy for the dialog, if we don’t have a reward, we cannot learn and define an optimal policy. With it we can define how we optimize the policy by optimizing the value of the reward. It is basically a metric for the algorithm's success. It can come form real users of from simulated ones.
 
 \subsection{What actions can system execute?}
 
 Interesting detail for optimizing the training process is explicitly define which actions can the system execute. This is important because we want to train the system to execute only those actions that are possible. For example, if the system is in a state where it cannot execute the action “say hello” (after user requests a restaurant's pnone number), then we should not train the system to execute that action. 
 
 In order to implement that we can use a mask to define which actions can be executed. The mask is a binary vector of size equal to the number of actions. If the mask is 1, then the action is allowed to be executed. If the mask is 0, then the action is not allowed to be executed.
+
+\par
+Next to the value funtion there is a Q-funtion, which determines how good it is to take action $a$ in belief state $b$ and then follow a policy $\pi$?
+
+\begin{center}
+    \begin{equation}
+        Q_{\pi}(b, a) = \E[R_t| b_t = b, a_t = a]
+    \end{equation}
+\end{center}
+
+The optimal value of Q is:
+\begin{center}
+    \begin{align}
+        &V_{*}(b) = max_{\pi}V_{\pi}(b) \\
+        &Q_{*}(b, a) = max_{\pi}Q_{\pi}(b, a) = \E[r_{t+1} + \gamma * V_{*}(b_{t+1})| b_t = b, a_t = a] \\
+    \end{align}
+\end{center}
+
+Bellman Optimality equation for Q-function:
+\begin{center}
+    \begin{equation}
+        Q_{*}(b, a) = \sum_{b^\prime, r} p(b^\prime, r | b, a)[r + \gamma * max_{a^\prime} Q_{*}(b^\prime, a^\prime)]
+    \end{equation}
+\end{center} 
+
+Then optimal policy is 
+\begin{center}
+    \begin{equation}
+        \pi_{*}(b) = argmax_{a} Q_{*}(b, a)
+    \end{equation}
+\end{center} 
+
+\subsection{Monte-Carlo policy}
+
+Monte Carlo control algorithm is a method for finding the optimal policy for a reinforcement problem.
+
+It is a tabular approach, which means that the belief state/summary space is discretised into a grid. In this algorithm the policy and the Q function are first defined randomly. Then we iterate over the dialogs with this polilcy. Throught this iteration we calculate the reward until the end of the dialog. For updating the state we choose the nearest state from the table and update the Q value and afterwards the policy with it, then in the next turn we will use an already updated policy. 
+
+\begin{center}
+    \includegraphics[width=10cm]{MCC.png}
+\end{center}
+It is a value-based algorithm, which means that it is based on the value of the state-action pairs. It is also a model-free method as it does not require any knowledge of the environment. And finally it is a on-policy as we use the current best estimate of the policy to guide the agent. And policy is updated iteratively until we find the optimal one. Regarding the exploration, it is a greedy method as we sometimes choose the action with the highest value, and sometimes pick a random one.
 
 \pagebreak
 
