@@ -475,7 +475,7 @@ where $\gamma$ is a discount factor,  $r$ is an immediate reward and $\max_a Q(s
 
 With iterative updates it will converge to an optimal Q-function.
 
-In comparison to Monte-Carlo this approach this one is more efficient as it does not keep track of all the past states. Instead it only remembers the current one. This happens because only Q-value of the current state is used to calculate a Q-value of the next state. Monte-Carlo reaches the maximum success rate of 76\% close to the 2000 dialogs, whereas Q-learning reaches the maximum success rate of 96\% after 2000 dialogs and has already 94\% after ~400 dialogs. The reward has almost doubled as well. 
+In comparison to Monte-Carlo this approach this one is more efficient as it does not keep track of all the past states. Instead it only remembers the current one. This happens because only Q-value of the current state is used to calculate a Q-value of the next state. Monte-Carlo reaches the maximum success rate of TODO 76\% close to the 2000 dialogs, whereas Q-learning reaches the maximum success rate of 96\% after 2000 dialogs and has already 94\% after ~400 dialogs. The reward has almost doubled as well. 
 
 Two reasons for benefits of DQN over Monte-Caro are: experience replay and delayed Q-targets. For experience replay one stores tuples ${s, a, r, s^\prime}$ in the buffer, where $s^\prime$ is the following dialog state and samples batches from the it. Delayed targets allow to stabilize the network as we the target network’s parameters are not trained, but they are periodically synchronized with the parameters of the main Q-network. The loss funciton here is the difference between Q-value of the current state + current reward vs. Q-value of the next state:
 
@@ -485,14 +485,14 @@ where $Q_{target}(r, s^\prime) = r + \gamma max_{a}Q_{target}(s^\prime,a)$
 
 if $s^\prime$ is a terminal state, then $Q(s^\prime, a) = Q_{target}(s^\prime, a) = 0$ for every $a$.
 
-Additionally we have trained a Q-network without the experience replay. In this case the result was much worse and the variance was much higher, therefore the network was very unstable.
+Additionally, we have trained a Q-network without experience replay. In this case reward was almost 3 times lower TODO (11.23 and 4.5) as well as the success rate. The variance has also increased and therefore the network became more unstable. One can see the results in Table TODO.
 
 \begin{center}
     \begin{tabular}{||c c c c||} 
      \hline
       & Reward & Success & Turns \\ [0.5ex] 
      \hline\hline
-     Experience replay & 11.23 +- 0.97 & 93.00 +- 3.56 & 7.37 +- 0.53 \\ 
+     Experience replay & TODO 11.23 +- 0.97 & 93.00 +- 3.56 & 7.37 +- 0.53 \\ 
      \hline
      No experience replay & 4.50 +- 2.04 & 69.00 +- 6.45 & 9.30 +- 0.94 \\
      \hline
@@ -501,6 +501,7 @@ Additionally we have trained a Q-network without the experience replay. In this 
 
 The same informations is presente also in the plots.
 
+TODO change images
 \begin{figure}[!htb]
     \minipage{0.32\textwidth}
       \includegraphics[width=\linewidth]{env2-CamRestaurants-experience.png}
@@ -516,15 +517,21 @@ The same informations is presente also in the plots.
     \endminipage
 \end{figure}
 
-As the system is not supposed to live on its own, here we present several dialogs conducted with it: 
+Here are several dialogs conducted with the system: 
 
 \begin{center}
-    \includegraphics[width=\linewidth]{address-1.png}
+    \includegraphics[width=\linewidth]{wants_food_type.png}
 \end{center}
 
 \begin{center}
-    \includegraphics[width=\linewidth]{phone.png}
+    \includegraphics[width=\linewidth]{name\ !=.png}
 \end{center}
+
+One can see that system sometimes is caught in the loop and keeps asking the same question over and over again. The reason might be that semantic decoder didn't work well and haven't recognised an imput correctly, so the systems continue to request more information. TODO get example
+
+It also noticable that system doesn't work well with answers like "I don't care" or "It doesn't matter" and insists on user making a choice (food-type for ex. see Figure TODO). This might be easily explained by the fact that ontoly doesn't contain such options.
+
+Somtimes it tries to inform on something else instead of providing a phone number. It might be the fault of the semantic decoder though, as the system decides that utterance "phone" is not a phone number request, but a request to find another restaurant. It might be that longer more human-like sentences "And what is the address of the suggested restaurant?" are more suitable.
 
 \section{Information Gain}
 
