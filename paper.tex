@@ -454,7 +454,8 @@ It is a tabular approach, which means that the belief state/summary space is dis
 \begin{center}
     \includegraphics[width=10cm]{MCC.png}
 \end{center}
-It is a value-based algorithm, which means that it is based on the value of the state-action pairs. It is also a model-free method as it does not require any knowledge of the environment. And finally it is a on-policy as we use the current best estimate of the policy to guide the agent. And policy is updated iteratively until we find the optimal one. Regarding the exploration, it is a greedy method as we sometimes choose the action with the highest value, and sometimes pick a random one.
+It is a value-based algorithm, which means that it is based on the value of the state-action pairs. It is also a model-free method as it does not require any knowledge of the environment. And finally it is a on-policy as we use the current best estimate of the policy to guide the agent. And policy is updated iteratively until we find the optimal one. Regarding the exploration, it is a greedy method as we sometimes choose the action with the highest value, and sometimes pick a random one. Distance between distributions is measured with Jensen-Shannon divergence, which is defined in the following way:
+
 
 \pagebreak
 
@@ -464,29 +465,25 @@ It is a value-based algorithm, which means that it is based on the value of the 
 
 %===========================================================
 \subsection{Q-Learning}
-Instead of keeping Q-values in a table, we keep them in a network. This network is called a Q-network. The Q-network is a neural network that takes the state of the dialog as input and outputs the Q-value for each of possible actions. The optimal Q-function (Q-network) obeys the following Bellman optimality equation: 
+Instead of keeping Q-values in a table, one can approximate a Q-function with a neural network (Q-network). It is a neural network that takes a state of a dialog as input and outputs Q-values for each possible action. An optimal Q-network obeys the following Bellman optimality equation: 
 
-\[ Q*(s,a) = \E [r + \gamma max_{a^\prime}Q(s^\prime,a^\prime)] \] 
+\[ Q^*(s,a) = \E [r + \gamma max_{a^\prime}Q(s^\prime,a^\prime)] \] 
 
-where $\gamma$ is the discount factor,  $r$ is the immediate reward and $\max_a Q(s',a)$ is the maximum Q-value of the next state. The idea of the DQN paper is to use this Bellman optimality equation to update the Q-function in an interative way:
+where $\gamma$ is a discount factor,  $r$ is an immediate reward and $\max_a Q(s',a)$ is the maximum Q-value of the next state. One uses Bellman equation to update the Q-function iteratively:
+
 \[Q_{i + 1} (s,a) \leftarrow \E[r + \gamma max_{a^\prime}Q_{i}(s^\prime,a^\prime)]\]
-It can be shown that with these iterations we will converge to the optimal Q-function.
 
-In comparison to Monte-Carlo approach this one is more efficient because it does not need to keep track of all the past states. Instead it only needs to keep track of the current state. This is because the Q-value of the current state is used to calculate the Q-value of the next state.
+With iterative updates it will converge to an optimal Q-function.
 
-DQN approach benefints from two main ideas: experience replay and delayed Q-targets. For this type of learning the tuples of ${s, a, r, s^\prime}$, there $s^\prime$ is the following dialog state. The loss which will be minimized is the difference between the Q-value of the current state and the Q-value of the next state:
+In comparison to Monte-Carlo this approach this one is more efficient as it does not keep track of all the past states. Instead it only remembers the current one. This happens because only Q-value of the current state is used to calculate a Q-value of the next state. Monte-Carlo reaches the maximum success rate of 76\% close to the 2000 dialogs, whereas Q-learning reaches the maximum success rate of 96\% after 2000 dialogs and has already 94\% after ~400 dialogs. The reward has almost doubled as well. 
+
+Two reasons for benefits of DQN over Monte-Caro are: experience replay and delayed Q-targets. For experience replay one stores tuples ${s, a, r, s^\prime}$ in the buffer, where $s^\prime$ is the following dialog state and samples batches from the it. Delayed targets allow to stabilize the network as we the target network’s parameters are not trained, but they are periodically synchronized with the parameters of the main Q-network. The loss funciton here is the difference between Q-value of the current state + current reward vs. Q-value of the next state:
 
 \[\L = \E_{(s, a, r, s^\prime) \sim D} [(Q_{target}(r,s^\prime) - Q(s, a))^2]\]
 
-where $Target(r, s^\prime) = r + \gamma max_{a}Q_{target}(s^\prime,a)$
+where $Q_{target}(r, s^\prime) = r + \gamma max_{a}Q_{target}(s^\prime,a)$
 
-and if $s^\prime$ is a terminal state then $Q(s^\prime, a) = Q_{target}(s^\prime, a) = 0$ for every $a$.
- 
-As well as with Monte-Carlo we choose and $e$-greedy action selection. In this case training with the second environment is much more efficient and accurate, than training the same environment using Monte-Carlo approach. 
-
-Experience replay provides two main advantages: first as we store data tuples $(s, a, r, s^\prime)$ in an experience buffer $D$, then each step of the experience that model encounters is potentially used in many weight updates. Second, as samples are very correlated, learning from subsequent samples is not efficient and creates a high variance.
-
-Delayed Q-Targets means that the target network is updated with the delay, which stabilizes the network even more. The updates of the target network work as a mean-time-average?????
+if $s^\prime$ is a terminal state, then $Q(s^\prime, a) = Q_{target}(s^\prime, a) = 0$ for every $a$.
 
 Additionally we have trained a Q-network without the experience replay. In this case the result was much worse and the variance was much higher, therefore the network was very unstable.
 
@@ -519,7 +516,52 @@ The same informations is presente also in the plots.
     \endminipage
 \end{figure}
 
-As the system is not supposed to live on its own, here we present several dialogs conducted with it. 
+As the system is not supposed to live on its own, here we present several dialogs conducted with it: 
+
+\begin{center}
+    \includegraphics[width=\linewidth]{address-1.png}
+\end{center}
+
+\begin{center}
+    \includegraphics[width=\linewidth]{phone.png}
+\end{center}
+
+\section{Information Gain}
+
+One can also substitute overall reward $r$ with $r = r + \nu r_i$, here $r_i$ is an additional intrinsic reward, and $\nu$ is a hyperparameter. This reward is called information gain and it measures how much additional information the system gets about user needs after one turn. Let action be of form $\{request, confirm,$ $select\}\_\xi$. Let $p_{\xi}$ and ${p_{\xi}}^\prime$ be belief distributions over possible values for $\xi$ in current and next belief state. Then the informa\-tion gain is the difference between these distributions with Jensen-Shannon divergence as a distance metric:
+
+\begin{equation}
+    r_i(s, a, s\prime) =
+    \begin{cases}
+        d(p_{\xi}, p_{\xi}^\prime) \\
+        0, \text{if } a \notin \text{\{request, confirm, select\}}
+    \end{cases}
+\end{equation}
+where
+\begin{equation}
+    \begin{aligned}
+        &d(p, q) = JS(p,q) = \frac{1}{2}(KL[p||m] + KL[q||m]), \\
+        &m = \frac{1}{2}(p + q)
+    \end{aligned}
+\end{equation}
+
+When the distance is big enough (higher than a threshold) we add the information gain to a reward additionally. Reward will be added only when the action was of the form ${request, confirm, select}$. Intuitively it also doesn't make sense to calculate information gain for actions like $bye, inform$ as they do not provide any additonal information on user needs and therefore do not lead to the accomplishment of the dialog goal. It is very beneficial to use intrinsic rewards in addition as they encourage system to get as much useful information from users as possible, by requesting more information from them, selecting the most relevant one and confirming the choices.
+
+Here one can see the difference in training with information gain and without it. Information gain improves the speed of training in the beginning and slightly improves the overall performance from $96\%$  to $98.4\%$ (see Figure 7, 8).
+
+\begin{figure}[!htb]
+    \minipage{0.5\textwidth}
+      \includegraphics[width=\linewidth]{env3-ig-CamRestaurants.png}
+      \caption{Information Gain}
+    \endminipage\hfill
+    \minipage{0.5\textwidth}
+      \includegraphics[width=\linewidth]{env3-CamRestaurants.png}
+      \caption{No Information Gain}
+    \endminipage
+\end{figure}
+
+One can also substitute $r = r + \nu r_i$. However one should be cautious --- if the value $\mu$ is too high, we push the sytem to gather more and more information and discourage it from making a choice and informing a user about it. 
+
 %=========================================================== 
 \section{Zweiter Abschnitt}
 
