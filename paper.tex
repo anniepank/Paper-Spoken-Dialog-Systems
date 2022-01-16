@@ -401,49 +401,34 @@ It is also possible to skip semantic decoding module and predict dialog acts dir
 Delexicalision can be done with word-vector embedding, as for. example similar words are used in similar contexts as well as antonyms (south, north, etc.). However contextual embedding performs even better for state tracking (when the vector embedding of the word depens on the sentence it is used in). This can be obtained with the transformer model. Self-attention layers in transformers relate different parts of the input sequence to produce a better representation for it. Multihead attention can replace delexicalisation as it compares the input sequence to possible slot values. With fine-tuned model like BERT (Bidirectional Encoder Representations from Transformers) 
 
 \section{Dialog state tracking as a reinforcement learning problem}
-Depending on the output of the state tracker, the agent can learn to perform the correct action. This is a reinforcement learning problem, where the agent is rewarded for performing the correct action. The agent can also be penalised for performing the incorrect action - like too long dialog for instance. It has the policy (its behaviour that) that it has to optimize, rewards from the environment, value function (prdiction of the future reward given current state) and model of the environment.
+Apart from tracking a state of a dialog, the agent must learn to perform the correct action. This is can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and might be penalised for the incorrect ones. Agent owns a policy (its behaviour) that it has to optimize, rewards from the environment, value function (prediction of the future reward given current state $b$) and a model of the environment.
+
+One also defines a Q-function, which determines how good it is to take action $a$ in belief state $b$ and then follow a policy $\pi$. Having an optimal Q-function one chooses an action that maximises its value, this will be an optimal action.
 
 
-\subsection{Why do we define a reward?}
+\begin{equation}
+    Q_{\pi}(b, a) = \E[R_t| b_t = b, a_t = a]
+\end{equation}
 
-Reward is a measure of the success of the policy for the dialog, if we don’t have a reward, we cannot learn and define an optimal policy. With it we can define how we optimize the policy by optimizing the value of the reward. It is basically a metric for the algorithm's success. It can come form real users of from simulated ones.
+The optimal value of Q is:
+\begin{align}
+    &V_{*}(b) = max_{\pi}V_{\pi}(b) \\
+    &Q_{*}(b, a) = max_{\pi}Q_{\pi}(b, a) = \E[r_{t+1} + \gamma * V_{*}(b_{t+1})| b_t = b, a_t = a]
+\end{align}
+
+Optimal policy is: 
+\begin{equation}
+    \pi_{*}(b) = argmax_{a} Q_{*}(b, a)
+\end{equation}
+
+
+\subsection{Why do to define a reward?}
+
+Reward is a measure of success of the policy for the dialog, if we don’t have a reward, we cannot learn and define an optimal policy. With it we can define how we optimize the policy by optimizing the value of the reward. It is basically a metric for the algorithm's success.
 
 \subsection{What actions can system execute?}
 
-Interesting detail for optimizing the training process is explicitly define which actions can the system execute. This is important because we want to train the system to execute only those actions that are possible. For example, if the system is in a state where it cannot execute the action “say hello” (after user requests a restaurant's pnone number), then we should not train the system to execute that action. 
-
-In order to implement that we can use a mask to define which actions can be executed. The mask is a binary vector of size equal to the number of actions. If the mask is 1, then the action is allowed to be executed. If the mask is 0, then the action is not allowed to be executed.
-
-\par
-Next to the value funtion there is a Q-funtion, which determines how good it is to take action $a$ in belief state $b$ and then follow a policy $\pi$?
-
-\begin{center}
-    \begin{equation}
-        Q_{\pi}(b, a) = \E[R_t| b_t = b, a_t = a]
-    \end{equation}
-\end{center}
-
-The optimal value of Q is:
-\begin{center}
-    \begin{align}
-        &V_{*}(b) = max_{\pi}V_{\pi}(b) \\
-        &Q_{*}(b, a) = max_{\pi}Q_{\pi}(b, a) = \E[r_{t+1} + \gamma * V_{*}(b_{t+1})| b_t = b, a_t = a] \\
-    \end{align}
-\end{center}
-
-Bellman Optimality equation for Q-function:
-\begin{center}
-    \begin{equation}
-        Q_{*}(b, a) = \sum_{b^\prime, r} p(b^\prime, r | b, a)[r + \gamma * max_{a^\prime} Q_{*}(b^\prime, a^\prime)]
-    \end{equation}
-\end{center} 
-
-Then optimal policy is 
-\begin{center}
-    \begin{equation}
-        \pi_{*}(b) = argmax_{a} Q_{*}(b, a)
-    \end{equation}
-\end{center} 
+Interesting trick for optimizing a training process is to explicitely define which actions are allowed for execution. An agent should be not allowed to execute those actions which are clearly impossible. For example, after user requests a restaurant's pnone number an agent should not be allowed to execute an action “say hello”. In order to implement that we can mask out with 0 those actions that are not allowed to be executed.
 
 \subsection{Monte-Carlo policy}
 
@@ -499,7 +484,7 @@ Additionally, we have trained a Q-network without experience replay. In this cas
     \end{tabular}
 \end{center}
 
-The same informations is presente also in the plots.
+The same informations is presented also in the plots.
 
 TODO change images
 \begin{figure}[!htb]
@@ -587,24 +572,6 @@ Here one can see the difference in training with information gain and without it
 \end{figure}
 
 One can also substitute $r = r + \nu r_i$. However one should be cautious --- if the value $\mu$ is too high, we push the sytem to gather more and more information and discourage it from making a choice and informing a user about it. 
-
-%=========================================================== 
-\section{Zweiter Abschnitt}
-
-However, these methods were previously quite unstable (Mnih et al., 2013). In DQN,
-Mnih et al. (2013, 2015) proposed two techniques
-to overcome this instability-namely experience replay and the use of a target network. In experience replay, all the transitions are put in a finite
-pool D (Lin, 1993). Once the pool has reached
-its predefined maximum size, adding a new transition results in deleting the oldest transition in
-the pool. During training, a mini-batch of transitions is uniformly sampled from the pool, i.e.
-(Bt
-, At
-, Rt+1, Bt+1) from U(D). This method removes the instability arising from strong correlation between the subsequent transitions of an
-episode (a dialogue). Additionally, a target network with weight vector w is used. This target
-network is similar to the Q-network except that
-its weights are only copied every tau steps from the
-Q-network, and remain fixed during all the other
-steps. The loss function for the Q-network at iter
 
 \pagebreak
 \begin{thebibliography}{ccccc}
