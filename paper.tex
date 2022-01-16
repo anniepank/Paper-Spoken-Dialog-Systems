@@ -517,21 +517,7 @@ TODO change images
     \endminipage
 \end{figure}
 
-Here are several dialogs conducted with the system: 
-
-\begin{center}
-    \includegraphics[width=\linewidth]{wants_food_type.png}
-\end{center}
-
-\begin{center}
-    \includegraphics[width=\linewidth]{name\ !=.png}
-\end{center}
-
 One can see that system sometimes is caught in the loop and keeps asking the same question over and over again. The reason might be that semantic decoder didn't work well and haven't recognised an imput correctly, so the systems continue to request more information. TODO get example
-
-It also noticable that system doesn't work well with answers like "I don't care" or "It doesn't matter" and insists on user making a choice (food-type for ex. see Figure TODO).
-
-Somtimes it tries to inform on something else instead of providing a phone number. It might be the fault of the semantic decoder though, as the system decides that utterance "phone" is not a phone number request, but a request to find another restaurant. It might be that longer more human-like sentences "And what is the address of the suggested restaurant?" are more suitable.
 
 There was no instances in the dataset where the user would say "I don't care" regarding the price range, and we can see an example of how the dialog is ruined when we encounter such a case, compare dialog 1 vs dialog 2. TODO dialog number Usually such infinite loops may happen due to bad recognition of speech, however here the problem is hidden probably in the state tracker. 
 
