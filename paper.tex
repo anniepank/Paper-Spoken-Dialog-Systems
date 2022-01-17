@@ -204,44 +204,57 @@ Arrival time can be mistaken with departing time:
 We can fix wrongly recognized "pm" by adding - in the evening.
 %===========================================================
 \section{Dialog state tracking}
-Dialog state tracker remembers everything important that has happend in the dialog so far. Dialog management problem can be solved with a generative model with the use of Markov decision process.
+Dialog state tracker remembers everything important that has happened in the dialog so far. Dialog management problem can be solved with the use of Markov decision process (Figure \ref{MDP}).
 
-\begin{center}
+\begin{figure}[ht]
     \includegraphics[width=\linewidth]{training-state-tr-1.png}
-\end{center}
-
-Process is represented with a dynamic baysian network of states that contain all important information about the dialog so far, actions are what system does and rewards - measures of how good is the dialog so far.
-
-\begin{figure}[!htb]
-    \minipage{0.27\textwidth}
-      \includegraphics[width=\linewidth]{markov.png}
-      \caption{Markov}
-    \endminipage\hfill
-    \minipage{0.26\textwidth}
-      \includegraphics[width=\linewidth]{partial-markov.png}
-      \caption{Partial Markov}
-    \endminipage\hfill
-    \minipage{0.46\textwidth}
-      \includegraphics[width=\linewidth]{state-split.png}
-      \caption{State Split}
-    \endminipage\hfill
+    \caption{MDP}
+    \label{MDP}
 \end{figure}
 
-To introduce the uncertainty here, we can say that utterances that we observe are not actual states, but observations we see, and that they are dependent on the state, then the states will be only partially observed and the process is called then partially observable markov process. Approximate solution for that process works with n-best list of utterances(observed states) and decomposes a state into user goal, user action and dialog history parts.
+Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) of 
+\begin{itemize}
+    \item Dialog states --- contain all current important information about the dialog
+    \item Actions --- what system does
+    \item Rewards --- measures of how good is the dialog so far
+\end{itemize}
 
-The dialogue state then consists of three components - goal (for each slot a distribution over possible values), method (a distribution over possible methods), and requested slots (for each requestable slot a binary distribution - wether it was requested or not).
-\par
-Most simple tracker might assume that the most probable state as the current state, but one can build a more advanced focus tracker that accumulates evidence of a changing state over the course of the dialogue. Let's define for methods and goal components $c \in V_c$ (all possible slot values) the quantity denoting that a slot(method) is not present in turn $t$:
+\begin{figure}[!htb]
+    \minipage{0.38\textwidth}
+      \includegraphics[width=\linewidth]{markov.png}
+      \caption{Markov}
+      \label{Markov}
+    \endminipage\hfill
+    \minipage{0.38\textwidth}
+      \includegraphics[width=\linewidth]{partial-markov.png}
+      \caption{Partial Markov}
+      \label{PartialMarkov}
+    \endminipage
+\end{figure}
+
+To introduce an uncertainty here, one can assume that observed utteran\-ces are not actual states, but observations, that are dependent on hidden states, then the process is called then partially observable Markov process (Figure \ref{PartialMarkov}).
+
+Dialogue state consists of a set of distributions for the next components: 
+\begin{itemize}
+    \item Goal --- for each slot a distribution over possible values
+    \item Method --- a distribution over possible methods
+    \item Requested slots --- for each requestable slot a binary distribution
+\end{itemize}
+
+\subsection{Focus Tracker}
+
+The simplest tracker assigns a single hypothesis for each slot at each turn, a more advanced option is a focus tracker. It accumulates evidence of a changing state over the course of the dialogue. Here we define how it tracks goals, methods, requestable slots. 
+
+Define for methods and goal components $c \in V_c$ (all possible slot values) a quantity denoting that a slot or method is not present in turn $t$:
 
 \begin{equation}
     \label{eqn:q_c_t}
     q_{c,t} := slu_{c,t}('none') = 1 - \sum_{v \in V_c \backslash \{'none'\}}slu_{c,t}(v)
 \end{equation}
 
-\noindent where $slu(v)$ stands for 'spoken dialog undertanding' and denotes a probability of a given slot value $v$ of a goal $c$ being the correct one.\\
+\noindent where $slu(v)$ and denotes a probability of given slot value $v$ for goal $c$ be\-ing a correct one. 
 
-\noindent Let's recursively define probabilities $p_{c,t}(v)$ for each $v$ in $V_c \backslash \{'none'\}$ as: 
-
+Recursively define probabilities $p_{c,t}(v)$ for each $v$ in $V_c \backslash \{'none'\}$ as: 
 \begin{align}
     \label{eqn:p_c_t}
     p_{c,t}(v) &=slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v) \\
@@ -251,7 +264,7 @@ Most simple tracker might assume that the most probable state as the current sta
     p_{c,t}('none') &= 1 - \sum_{v \in V_c \backslash \{'none'\}}p_{c,t}(v)
 \end{align}
 
-\noindent For a requestable slot $s$ we define 
+For a requestable slot $s$ define 
 \begin{align}
     \label{eqn:p_s_t}
     p_{s,t} &= slu_{s,t} + (1 - slu_{s, t})\cdot p_{s,t-1} \\
@@ -259,7 +272,7 @@ Most simple tracker might assume that the most probable state as the current sta
     p_{s,0} &= slu_{s,0}
 \end{align}
 
-\noindent Let's prove that probabilities are well-defined, in other words that $0 \leq p_{c,t}(v) \leq 1$ $\forall v \in V_c, \forall t, \forall c$
+Now let's prove that probabilities are well-defined, in other words that $0 \leq p_{c,t}(v) \leq 1$ $\forall v \in V_c, \forall t, \forall c$
 
 \begin{proof}
     For goals(methods).
@@ -332,42 +345,68 @@ Most simple tracker might assume that the most probable state as the current sta
     \end{equation}
 \end{proof}
 
-\subsection{Exercise 3 Quality Evaluation}
-To evaluate the quality of a belief state tracker one can use accuracy as a fraction of turns where the top dialogue state hypothesis is correct or an l2-norm of the hypothesised distribution $p$ and the true label, where $i$ is index of the true label. 
-\begin{center}
-    \begin{equation}
-        L_2 = (1-p_i)^2 + \sum_{j \neq i} p_j^2
-    \end{equation}
-\end{center}
-Focus tracker performes much better for the informable slots. This is an expected behaviour as informable slot may change over time, and the probabi\-lity of the slot being informable will change over time. However for the requestable slot focus tracker doesn't show a better performance and usually the requestable slots do not change during the dialog, they are requested once and after that removed from the set of the requestable slots. The same applied for the methods, performance there is the similar to the baseline tracker as user only once "sets" by which method he wants to achieve the goal.
+\subsection{Quality Evaluation}
+To evaluate a quality of a belief state tracker one can use a fraction of turns where a top dialogue state hypothesis was correct (accuracy) or use the following equa\-tion (\ref{l2}) where $p$ is a hypothesised distribution, $i$ is an index of a true label. 
+\begin{equation}
+    L_2 = (1-p_i)^2 + \sum_{j \neq i} p_j^2
+    \label{l2}
+\end{equation}
 
-\subsection{Exercise 4}
-What happens to a probability if a user gives the exact same utterance in
+In comparison to the simplest tracker focus tracker performs much better for informable slots. This is an expected behaviour as informable slot may change over time, and probabi\-lity of the slot being informable will also change. However for the requestable slot focus tracker doesn't show a better performance as usually the requestable slots should not change during the dialog, they are requested once and after that removed from the set of the requestable slots, after that the user can decide to request another one. The same applies for methods, performance there is similar to the baseline tracker as user only once "sets" by which method he wants to achieve the goal.
+
+One can see the results for both trackers in Table \ref{focus_tracker_results} and Table \ref{baseline_tracker_results}.
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{|c c c c|}
+        \hline
+                    & Joint Goals & Requested & Method \\
+        \hline
+        Accuracy   & 0.73        & 0.92      & 0.68 \\ 
+        L2         & 0.42        & 0.12      & 0.58 \\
+        \hline
+        \end{tabular}
+        \caption{Focus Tracker}
+        \label{focus_tracker_results}
+    \end{table}
+
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{|c c c c|}
+        \hline
+                    & Joint Goals   & Requested & Method \\ 
+        \hline
+        Accuracy   & 0.57          & 0.91      & 0.68 \\ 
+        L2         & 0.83          & 0.12      & 0.58  \\
+        \hline
+        \end{tabular}
+        \caption{Simplest Tracker}
+        \label{baseline_tracker_results}
+    \end{table}
+
+\subsection{Interesting Question}
+What happens to a probability when user gives an exact same utterance in
 the first two turns of the dialog?
 
-$slu = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 2} = q$ for $\forall c \forall v \in V_c $
+In this case $slu(v) = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 2} = q$ for $\forall c \forall v \in V_c $
 
-\begin{equation}
-    \begin{aligned}
-        &p_{c,2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) 
-        \\
-        &p_{c,1}(v) = slu_{c,1}(v)
-        \\
-        &p_{c, 2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) = slu(v)(1 + q_c)
-    \end{aligned}
-\end{equation}
+\begin{align*}
+    &p_{c,2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) 
+    \\
+    &p_{c,1}(v) = slu_{c,1}(v)
+    \\
+    &p_{c, 2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) = slu(v)(1 + q_c) \geq p_{c,1}(v)
+\end{align*}
 
 $\Rightarrow$ probability of value $v$  for slot $c$ will grow $p_{c,2}(v) \geq p_{c,1}(v) \forall v \in V_c $
 
-\begin{equation}
-    \begin{aligned}
-        p_{c,2}('none') = 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,2}(v) \leq 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,1}(v)  = p_{c,1}('none')
-    \end{aligned}
-\end{equation}
+\begin{align*}
+    p_{c,2}('none') = 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,2}(v) \leq 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,1}(v)  = p_{c,1}('none')
+\end{align*}
 
-So the probability of value 'none' when the same utterance is repeated twice decreases.
+\noindent and the probability of value $none$ decreases.
+This makes an intuitie sense, if a user repeats a sentence an agen should increase a probability of the slots mentioned by him and descrease a probability of $none$ values as user definitely wants to pass to the agent some important information.
 
-\subsection{Exercise 5}
+\subsection{Another update rule}
 Let's define another update rule:
 \begin{equation}
     p_{c,t}(v) = (1-q_{c,t})\cdot slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v)
@@ -382,17 +421,20 @@ and
     \label{eqn:q_c_1}
     q_{c, 1} = slu_{c,1}(v) = 0.5
 \end{equation}
+for some $v$.
 
-\noindent What happens to the probability $p_{c,1}(v)$?\\
+What happens to probability $p_{c,1}(v)$?
 
-\noindent Since (\ref{eqn:q_c_0_1}) means that all probabilities were 0 for any $v$ apart from 'none' value, so $p_{c,0}(v) = 0$ for all $v \in V_c$ \\
+Since (\ref{eqn:q_c_0_1}) means that all probabilities were 0 for any $v$ apart from $none$, then $p_{c,0}(v) = 0$ for all $v \in V_c$. Then: 
+\begin{align*}
+    p_{c,1}(v) = (1 - 0.5) \cdot 0.5 + 0 = 0.25
+\end{align*}
 
-\noindent Then $p_{c,1}(v) = (1 = 0.5) \cdot 0.5 + 0 = 0.25$ \\
+As the slot was not in the first turn and then appeared in the second turn with probability 0.5, then it is okay to assume that the the probability of it might be not 0.5 (as it would be in previous update rule) but 0.25. 
 
-\noindent As the slot was not in the first turn and then appeared in the second turn with probability 0.5, then it is okay to assume that the the probability of it might be not 0.5 (as it would be in previous update rule) but 0.25. \\
+In general, such update rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a totally reasonable update. 
 
-\noindent In general, such rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a totally reasonable update. 
-
+\newpage
 
 \section{Dialog state tracking as a reinforcement learning problem}
 Apart from tracking a state of a dialog, the agent must learn to perform the correct action. This is can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and might be penalised for the incorrect ones. Agent owns a policy (its behaviour) that it has to optimize, rewards from the environment, value function (prediction of the future reward given current state $b$) and a model of the environment.
