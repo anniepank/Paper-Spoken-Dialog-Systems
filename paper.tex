@@ -204,13 +204,13 @@ Arrival time can be mistaken with departing time:
 We can fix wrongly recognized "pm" by adding - in the evening.
 %===========================================================
 \section{Dialog state tracking}
-Dialog state tracker remembers everything that has happend in the dialog and that is important for this dialog. Dialog management problem can be solved with a generative model with the use of Markov decision process.
+Dialog state tracker remembers everything important that has happend in the dialog so far. Dialog management problem can be solved with a generative model with the use of Markov decision process.
 
 \begin{center}
     \includegraphics[width=\linewidth]{training-state-tr-1.png}
 \end{center}
 
-Process is represented with a dynamic baysian network of states that contain all important information about the dialog so far, actions are what system does and rewards - measures of how good the dialog is so far.
+Process is represented with a dynamic baysian network of states that contain all important information about the dialog so far, actions are what system does and rewards - measures of how good is the dialog so far.
 
 \begin{figure}[!htb]
     \minipage{0.27\textwidth}
@@ -227,13 +227,11 @@ Process is represented with a dynamic baysian network of states that contain all
     \endminipage\hfill
 \end{figure}
 
-To introduce the uncertainty here, we can say that the utterances that we observe are not actual states, but that the observations (utterances) we see, and that they are dependent on the state, then the states will be only partially observed and the process is called then partially observable markov process and there is a tractable approximations for it called HIS. It works with n-best list of utterances(observed states) and decomposes a state into user goal, user action and dialog history parts.
-
-In generative models we assume that the features between subsequent turns are conditionally independent given the underlying states, but we can model directly dependence of states on the observed features which can be correlated between the turns. This approach is called discriminative model.
+To introduce the uncertainty here, we can say that utterances that we observe are not actual states, but observations we see, and that they are dependent on the state, then the states will be only partially observed and the process is called then partially observable markov process. Approximate solution for that process works with n-best list of utterances(observed states) and decomposes a state into user goal, user action and dialog history parts.
 
 The dialogue state then consists of three components - goal (for each slot a distribution over possible values), method (a distribution over possible methods), and requested slots (for each requestable slot a binary distribution - wether it was requested or not).
 \par
-Simple tracker might take the most probably state, but one can build a cocus tracker that accumulates evidence of a changing state over the course of the dialogue. Let's define for methods and goal components $c \in V_c$ (all possible slot values) the quantity denoting that a slot(method) is not present in turn $t$:
+Most simple tracker might assume that the most probable state as the current state, but one can build a more advanced focus tracker that accumulates evidence of a changing state over the course of the dialogue. Let's define for methods and goal components $c \in V_c$ (all possible slot values) the quantity denoting that a slot(method) is not present in turn $t$:
 
 \begin{equation}
     \label{eqn:q_c_t}
@@ -370,7 +368,7 @@ $\Rightarrow$ probability of value $v$  for slot $c$ will grow $p_{c,2}(v) \geq 
 So the probability of value 'none' when the same utterance is repeated twice decreases.
 
 \subsection{Exercise 5}
-Let's defince another update rule:
+Let's define another update rule:
 \begin{equation}
     p_{c,t}(v) = (1-q_{c,t})\cdot slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v)
 \end{equation}
@@ -395,10 +393,6 @@ and
 
 \noindent In general, such rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a totally reasonable update. 
 
-\section{Better models}
-It is also possible to skip semantic decoding module and predict dialog acts directly from the transcribed speech. One doesn't have to label the utterances in this case, however dexelicalisation is still needed and it is the main accuracy gainer for such methods. And it requires a semantic dictionary for all values from ontology, which is also difficult to obtain in practice.
-
-Delexicalision can be done with word-vector embedding, as for. example similar words are used in similar contexts as well as antonyms (south, north, etc.). However contextual embedding performs even better for state tracking (when the vector embedding of the word depens on the sentence it is used in). This can be obtained with the transformer model. Self-attention layers in transformers relate different parts of the input sequence to produce a better representation for it. Multihead attention can replace delexicalisation as it compares the input sequence to possible slot values. With fine-tuned model like BERT (Bidirectional Encoder Representations from Transformers) 
 
 \section{Dialog state tracking as a reinforcement learning problem}
 Apart from tracking a state of a dialog, the agent must learn to perform the correct action. This is can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and might be penalised for the incorrect ones. Agent owns a policy (its behaviour) that it has to optimize, rewards from the environment, value function (prediction of the future reward given current state $b$) and a model of the environment.
@@ -439,7 +433,6 @@ It is a tabular approach, which means that the belief state/summary space is dis
 \begin{center}
     \includegraphics[width=10cm]{MCC.png}
 \end{center}
-It is a value-based algorithm, which means that it is based on the value of the state-action pairs. It is also a model-free method as it does not require any knowledge of the environment. And finally it is a on-policy as we use the current best estimate of the policy to guide the agent. And policy is updated iteratively until we find the optimal one. Regarding the exploration, it is a greedy method as we sometimes choose the action with the highest value, and sometimes pick a random one. Distance between distributions is measured with Jensen-Shannon divergence, which is defined in the following way:
 
 
 \pagebreak
