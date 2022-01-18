@@ -7,6 +7,7 @@
 \usepackage{amssymb}
 \usepackage{amsthm}
 \usepackage{hyphenat}
+\usepackage{caption}
 
 \graphicspath{ {./images} }
 \DeclareMathOperator*{\E}{\mathbb{E}}
@@ -70,48 +71,26 @@ Betreuer: Prof.\ Dr.\ Vorname Nachname
 In der vorgelegten Abschlussarbeit untersuchen wir ...
 
 \pagebreak
-\section{Spoken Dialog System}
-A spoken dialogue system is a computer system that enables human computer interaction where primary input is speech. Examples of such systems are voice assistants, chatbots, and conversational interfaces (Siri, Alexa, Google Home, etc.). \par
+\section{Spoken Dialog Systems}
+A spoken dialogue system is a computer system that enables human computer interaction where primary input is speech --- voice assistants (Siri, Alexa, etc.), chatbots, and etc. \par
 
-A good spoken dialogue system has the following properties: understands the user, decides what to say back, conducts a conversation beyond simple vo\-ice commands or question answering. 
-In this overview we will be considering a goal-oriented systems (the ones which are targeted to accomplish a goal in the context of a task - to book a restaurant for ex.). In this case the scope of the conversation is usually limited to a specific domain - a database contating all knowledge about the topic. Such database is called an ontology.
-\par
-One of the straightforward and old approaches to create such a system is rule-base model. However such models of course require to handcraft a lot of rules, don't keep track of what has already happend in the dialog and therefore are not prone to annoying repetitive behaviour. And here machine learning approaches come in handy. \par
+A good spoken dialogue system is able to:
+\begin{itemize}
+     \item understand a user
+     \item decide what to say back
+     \item conduct a conversation beyond simple voice commands or question answering
+\end{itemize}
 
-System is usually split into modules each responsible for a specific task with well defined input and output, for each a machine learning algorithm can be used. Spoken language understanding (SLU), Dialogue management (DM), Spoken language generation (SLG). Modular approach has a downside of loosing information between the modules, for example if we have recognised speech incorrectly all following steps will be failed, however ML approaches allow to consider a list of possible inputs scored by their probability, and therefor uncertainty is propagated through the pipeline. \par
-\includegraphics[width=\linewidth]{SDS-main.png}
+Here only goal-oriented systems will be considered, where the scope of the conversation is usually limited to a specific domain with an ontology describing it.
 
-Both semantic decoding and natural language generation depend on the ontology. Dialogue manager in addition needs to query the ontology to be able to provide an adequate response.
+System is usually split into separate modules with well-defined input and output, in each a machine learning algo\-rithm can be used (Figure \ref{fig:SDS-main}). Spoken language understanding (SLU) --- for detecting and encoding users' speech, Dialogue manage\-ment (DM) --- for tracking important imformation in the dialog and choosing correct answers, Spoken language gene\-ration (SLG) --- translating answers for a user into a speech. Modular approach has a downside of loosing information bet\-ween the modules, however ML approaches allow to consider a list of possible inputs with probabilities, and uncertainty gets propagated through the pipeline.
 
-\subsection{Word represeantions}
-To match user utterances with the ontology concepts we either have to either handcode all of the possible user utterances (which is completely uproductive in the constantly changing language and doesn't scale well), or learn their representation implicitely. For instance using a distri\-butional approach by encoding words into vectors, which can be learned statistically from the corpus of many texts. One can learn static representation with such statistical methods as word2vec, GloVe, fastText (uses n-grams) or contextualized neural language models such as ELMo, BERT etc.
+\begin{figure}[!h]
+    \includegraphics[width=\linewidth]{SDS-main.png}
+    \caption{}
+    \label{fig:SDS-main}
+\end{figure}
 
-\par
-With static word respresentation one can have a meaningfull distance metric, cosine similarity for ex.: the closer the word vectors are - the more similar meaning they have.
-
-\begin{equation}
-    cos(w_i,w_j) = \frac{w_i^T \cdot w_j}{||w_i|| \cdot ||w_j||}
-\end{equation}
-
-With this approach one can get examples like: $w$("queen") = $w$("king") - $w$("man") + $w$("women")
-\par
-
-\pagebreak
-
-\section{SLU. Speech recognition}
-Speech recognition might be complicated by differences in speakers, environ\-mental noises, divestiry of vocabulary and so on. Uncertanties in recognition brought by these factors shoulbe be propagated through the pipeline so that information is not lost after the SLU module because of the wrong recognition.
-\begin{center}
-    \includegraphics{training-1.png}
-\end{center}
-\par 
-There is not straightforward way to convert speech into text - think for example about how to detect when user stars or ends speaking?
-\par Recognition usually doesn't assume the speech being represented in words only, but it works in the hiranhical way: utterance $\Rightarrow$ words $\Rightarrow$ subwords(pho\-nemes, triphones) $\Rightarrow$ 3 senones. By subwords we understand the phonemes, by triphones that one can find the in dictionary. 3 senones represent a subwords unit - specifically its beginning, middle and end.
-
-\begin{center}
-    \includegraphics[width=\linewidth]{hierarcy-speech.png}
-\end{center}
-
-Because we have to align labels in trainging and during recognition the task is to find the most matching sequence from all possible ones we can well apply a HMM model here. Each phone is modeled with 3 states. The sequence of senones is a sequence of states for HMM. Each state of an HMM generates a feature vector of a frame. Before pure GMM were applied to solve these problems, afterwards deep learnining came into play hybrid HMM-DNN models appeared. There also exist end-to-end transformer models which train from sequence of phones and produce a sequence of frames.
 
 \pagebreak
 \section{Semantic Decoding}
@@ -121,6 +100,7 @@ We can view semantic decoding as a classification task: having a probabi\-lity f
 
 \begin{figure}[h!]
     \includegraphics[width=\linewidth]{training-2.png}
+    \caption{}
 \end{figure}
 
 Utterances for classification task can be represented as a fixed-size vector, where we preserve only information about which and how many words are there. To keep the word order information additionally one can use an n-gram model. Delexicalisation is used in advance to cluster special terms as $area$ or $food-type$ with the help of ontology. Then several SVMs are trained to classify possible dialog acts (Figure \ref{fig:semantic-decoding-classification}).
