@@ -56,19 +56,11 @@ Betreuer: Prof.\ Dr.\ Vorname Nachname
 \end{center}
 \end{titlepage}
 
-\thispagestyle{empty}\mbox{}\pagebreak
+\thispagestyle{empty}\mbox{}
 \setcounter{page}{0}
 
 %===========================================================
 \tableofcontents
-\pagebreak
-
-
-%===========================================================
-\section*{Einleitung}
-\addcontentsline{toc}{section}{Einleitung}
-
-In der vorgelegten Abschlussarbeit untersuchen wir ...
 
 \pagebreak
 \section{Spoken Dialog Systems}
@@ -94,59 +86,101 @@ System is usually split into separate modules with well-defined input and output
 
 \pagebreak
 \section{Semantic Decoding}
-Semantic decoding translates user utterances into a set of sematic concepts (dia\-log acts). Dialog act consists of 2 parts: intent (dialog act type) and sematic slots with their values. For instance the sentence "Is there a cheap restaurant in the center?" can be translated into $inform(price=cheap,$ $area$$=center)$. Intent is $inform$, slot $price$ with value $cheap$ and slot $area$ with the value $center$.
+Speech recogniser module of SLU translates speech into text and outputs a list of possible user utterances along with their probabilities (Figure \ref{fig:several}).
 
-We can view semantic decoding as a classification task: having a probabi\-lity for each act type and each slot-value pair.
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.65\linewidth]{uncertanty.png}
+    \caption{}
+    \label{fig:several}
+\end{figure}
+The task of a sematic decoder module is to get the meaning from them by translating utterances into a set of sematic concepts (dia\-log acts). Dialog act consists of: 
+
+\begin{itemize}
+    \item intent / dialog act type
+    \item slot-value pairs
+\end{itemize}
+
+For instance a sentence ``Is there a cheap restaurant in the center?" translates into $inform(price=cheap,$ $area$ $=center)$, where $inform$ is an intent, $price$ is a slot with value $cheap$ and $area$ is a slot with value $center$.
+
+\subsection{Models}
+One approach would be to view semantic decoding as a classification task --- having a sepa\-rate probabi\-lity for each dialog act type and each slot-value pair.
 
 \begin{figure}[h!]
-    \includegraphics[width=\linewidth]{training-2.png}
+    \centering
+    \includegraphics[width=0.8\linewidth]{training-2.png}
     \caption{}
 \end{figure}
 
-Utterances for classification task can be represented as a fixed-size vector, where we preserve only information about which and how many words are there. To keep the word order information additionally one can use an n-gram model. Delexicalisation is used in advance to cluster special terms as $area$ or $food-type$ with the help of ontology. Then several SVMs are trained to classify possible dialog acts (Figure \ref{fig:semantic-decoding-classification}).
+Utterance can be represented as a fixed-size vector, where only informa\-tion on which and how many words are there is preserved. To add positional information one can use an n-gram model. Delexicalisation clusters special terms as $area$ or $food-type$ with the help of ontology. Then several SVMs are trained to classify possible dialog acts (Figure \ref{fig:semantic-decoding-classification}).
 
 \begin{figure}[h!]
     \includegraphics[width=0.998\textwidth]{semantic-decoding-classification.png}
+    \caption{}
     \label{fig:semantic-decoding-classification}
 \end{figure}
 
-Several possible utterances are considered (Figure \ref{several}).
-\begin{figure}[h!]
+Another approach is to view it as a seq-to-seq task ---  translating an utterance into a sequence of tags, for ex.:
+
+\begin{center}
+    ``i want to fly from Minsk to Kiev round trip tomorrow" 
+\end{center}
+
+can be translated into the sequence of tags: 
+\begin{center}
+    ["O", "O", "O", "O", "O", "B-fromloc.city\_name", "O", "B-toloc.city\_name", "B-round\_trip", "I-round\_trip", "B-departure\_date"]
+\end{center}
+\begin{figure}[!h]
     \centering
-    \includegraphics{uncertanty.png}
-    \caption{Several Utterances}
-    \label{several}
+    \includegraphics[width=0.91\linewidth]{training-2-2.png}
+    \caption{}
+    \label{fig:semantic-decoding-seq2seq}
 \end{figure}
 
-We can view this as a seq-to-seq task: translating an utterance into a sequence of tags, for ex. "I want to fly from Minsk to Kiev round trip tomorrow" can be translated into the sequence of tags: ["O", "O", "O", "O", "O", "B-fromloc.city\_name", "O", "B-toloc.city\_name", "B-round\_trip", "I-round\_trip", "B-departure\_date"].
-\begin{figure}[h!]
-    \includegraphics[width=\linewidth]{training-2-2.png}
-\end{figure}
+Model predicting a sequence of tags can be a simple RNN with two heads --- one for predicting the tags and another for predicting intent or conditional random fields (CRF) instead (Figure \ref{fig:semantic-decoding-seq2seq}).
 
-Model predicting a sequence of tags can be a simple RNN with two heads - one for predicting the tags and another for predicting intent or conditional random fields (CRF) instead.
+\subsection{Evaluation for RNN model}
 
-There are different ways of how we can evaluate such model. But first, having a sequence of tags, we can convert it to a set of slots in the following way: input = [B-food-type I\_food-type O B\_price-range O], output = [(food-type, start=0, end=1), (price-range, start=3, end=3)]. Then having a set of true and predicted slots we can compare them on the slot level: if predicted slot was in true slots, then this is a true positive. If predicted slot was not in true slots, then this is a false positive. If true slot was not in predicted slots, then this is a false negative. Then from these values, we can calculate precision, recall and F1 score.
+Having predictions from RNN the easiest mectric to calculate would be a f1-score on a slot level. One first collects slots from a predicted tags sequence:
+\begin{center}
+    input = [B-food-type\quad I\_food-type\quad O\quad B\_price-range\quad O] \\
+    output = [(food-type, start=0, end=1), (price-range, start=3, end=3)]
+\end{center}
 
-On the other hand, we can calculate accuracy directly on the predicted sequence of tags, without converting it to slots. In this case we keep the mapping of each tag to 3 counters for TP, FP and FN. After that there are 2 options on how to average the metrics. On a macro level, we first calculate precision, recall and f1-score for each of the tags, then we average these metrics across all tags. On a micro level we do the weighted average, so for ex. to calculate precision we divide the sum of all TP by the sum of all TP+FP of all tags. 
+Afterwards, having a set of true and predicted slots we can can calculate true posutives (TP), false positives (FP), false negatives (FN) on a slot level. Having these values one can calculate precision, recall and F1-score.
 
-Macro average can be much lower than a weighted average (Table \ref{RNNMetrics}), because there can be a lot of rare classes with few instances which were not predicted or predicted wrongly while there are not so many classes with a lot of instances, which are therefore predicted correctly.
+The other way to evaluate a model is to calculate TP, FP, FN for each tag, without converting them to slots. After there are two options on how to average the metrics: on a macro level (Equation \ref{eq:precision_macro}) and in a micro level (Equation \ref{eq:precision_micro}. Recall and F1-score are calculated analogically.
 
-\begin{table}
+\begin{equation}
+    Precision = \frac{1}{N_{slots}} \times \sum_{s \in slots}{s_{Precision}}
+    \label{eq:precision_macro}
+\end{equation}
+
+\begin{equation}
+    Precision = \frac{\sum_{s \in slots}{s_{TP}}}{\sum_{s \in slots}{s_{TP} + s_{FN}}}
+    \label{eq:precision_micro}
+\end{equation}
+
+Macro average was much lower than a micro average (Table \ref{RNNMetrics}), because there can be a lot of classes with only few instances which were not predicted or predicted wrongly while there are not so many classes with a lot of instances, which are therefore predicted correctly, therefore without weight\-ning by the number of samples (micro level) one gets a lower average.
+
+\begin{table}[!h]
     \centering
     \begin{tabular}{ | c | c | c | c | c |}
         \hline
                         & Precision & Recall & F1-score \\
+        \hline
+        accuracy        &           &        & 0.95 \\
         \hline
         marco average   & 0.48      & 0.46   & 0.45 \\
         \hline
         weighted average& 0.94      & 0.95   & 0.94 \\
         \hline
     \end{tabular}
-    \caption{RNN Metrics}
+    \caption{}
     \label{RNNMetrics}
 \end{table}
 
-Let's have a look on how the tags are recognised after training. 
+Let's have a look on how the tags are recognised after training: 
 \begin{center}
     \resizebox{\textwidth}{!}{
     \begin{tabular}{ c c c c c c c c c c c c c }
@@ -158,7 +192,7 @@ Let's have a look on how the tags are recognised after training.
     \end{tabular}}
 \end{center}
 
-We can fix it by adding words "with a stop in".
+We can fix it by adding words ``with a stop in".
 \begin{center}
     \resizebox{\textwidth}{!}{
     \begin{tabular}{ c c c c c c c c c c c c c c}
@@ -168,7 +202,7 @@ We can fix it by adding words "with a stop in".
     \end{tabular}}
 \end{center}
 
-There are also many instances when the state name is recognized as a city name. 
+Many instances where $state\_name$ was recognized as a $city\_name$: 
 \begin{center}
     \resizebox{\textwidth}{!}{
     \begin{tabular}{ c c c c c c c c c c c}
@@ -180,63 +214,83 @@ There are also many instances when the state name is recognized as a city name.
     \end{tabular}}
 \end{center}
 
-Arrival time can be mistaken with departing time:
+$arrive\_time$ can be mistaken with $depart\_time$:
 \begin{center}
     \scalebox{0.7}{
-    \begin{tabular}{ c c c c c}
+    \begin{tabular}{| c | c | c | c | c |}
+        \hline
         Sentence & True & Predicted & Changes & New prediction\\
+        \hline
+        \hline
         i &O&O & i & O\\
+        \hline
         would &O&O & would & O\\
+        \hline
         like  &O&O & like & O\\
+        \hline
         to &O& O & to & O\\
+        \hline
         return &O& O & fly& O\\
+        \hline
         from &O& O & around & B-depart\_time.time\_relative\\
+        \hline
         chicago &B-fromloc.city\_name& B-fromloc.city\_name & 7 & B-depart\_time.time\\
+        \hline
         around &B-depart\_time.time\_relative& B-depart\_time.time\_relative & in & O\\
+        \hline
         7 &B-depart\_time.time& B-depart\_time.time & the & O\\
+        \hline
         pm &I-depart\_time.time& I-arrive\_time.time & evening & B-depart\_time.period\_of\_day\\
+        \hline
         to &O& O & from & O\\
+        \hline
         kansas  &B-toloc.city\_name& B-toloc.city\_name & chicago & B-fromloc.city\_name\\
+        \hline
         city &I-toloc.city\_name& I-toloc.city\_name & to & O \\
+        \hline
         &&&kansas & B-toloc.city\_name\\
+        \hline
         &&& city & I-toloc.city\_name\\
+        \hline
     \end{tabular}}
 \end{center}
 
-We can fix wrongly recognized "pm" by adding - in the evening.
+We can fix wrongly recognized ``pm" by adding ``in the evening".
 %===========================================================
+\pagebreak
 \section{Dialog state tracking}
-Dialog state tracker remembers everything important that has happened in the dialog so far. Dialog management problem can be solved with the use of Markov decision process (Figure \ref{MDP}).
+First task of dialog management module is to track a dialog state. Dialog state tracker remembers everything important that has happened in the dialog so far. Tracking problem can be solved with the use of Markov decision process (Figure \ref{MDP}).
 
 \begin{figure}[ht]
-    \includegraphics[width=\linewidth]{training-state-tr-1.png}
-    \caption{MDP}
+    \centering
+    \includegraphics[width=0.8\linewidth]{training-state-tr-1.png}
+    \caption{}
     \label{MDP}
 \end{figure}
 
-Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) of 
+Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) with 
 \begin{itemize}
-    \item Dialog states --- contain all current important information about the dialog
+    \item Dialog states --- containing current important information about the dialog
     \item Actions --- what system does
-    \item Rewards --- measures of how good is the dialog so far
+    \item Rewards --- measures of the quality of the dialog so far
 \end{itemize}
 
 \begin{figure}[!htb]
     \minipage{0.38\textwidth}
       \includegraphics[width=\linewidth]{markov.png}
-      \caption{Markov}
+      \caption{}
       \label{Markov}
     \endminipage\hfill
     \minipage{0.38\textwidth}
       \includegraphics[width=\linewidth]{partial-markov.png}
-      \caption{Partial Markov}
+      \caption{}
       \label{PartialMarkov}
     \endminipage
 \end{figure}
 
-To introduce an uncertainty here, one can assume that observed utteran\-ces are not actual states, but observations, that are dependent on hidden states, then the process is called then partially observable Markov process (Figure \ref{PartialMarkov}).
+To introduce an uncertainty here, one can assume that observed utteran\-ces are dependent on hidden states, then the process is called then partially observable Markov process (Figure \ref{PartialMarkov}).
 
-Dialogue state consists of a set of distributions for the next components: 
+Dialogue state is a set of distributions for the next components: 
 \begin{itemize}
     \item Goal --- for each slot a distribution over possible values
     \item Method --- a distribution over possible methods
@@ -245,18 +299,18 @@ Dialogue state consists of a set of distributions for the next components:
 
 \subsection{Focus Tracker}
 
-The simplest tracker assigns a single hypothesis for each slot at each turn, a more advanced option is a focus tracker. It accumulates evidence of a changing state over the course of the dialogue. Here we define how it tracks goals, methods, requestable slots. 
+The simplest tracker assigns a single hypothesis for each slot at each turn, a more advanced option is a focus tracker. It accumulates evidence of a changing state over the course of the dialogue. Here is defined how it tracks goals, methods, requestable slots. 
 
-Define for methods and goal components $c \in V_c$ (all possible slot values) a quantity denoting that a slot or method is not present in turn $t$:
+Define for methods and goal components $c$ a quantity denoting that a slot or method is not present in turn $t$:
 
 \begin{equation}
     \label{eqn:q_c_t}
     q_{c,t} := slu_{c,t}('none') = 1 - \sum_{v \in V_c \backslash \{'none'\}}slu_{c,t}(v)
 \end{equation}
 
-\noindent where $slu(v)$ and denotes a probability of given slot value $v$ for goal $c$ be\-ing a correct one. 
+\noindent where $slu_c(v)$ is a probability of a given slot value $v$ for goal $c$ be\-ing a correct one, $V_c$ are all possible slot values.
 
-Recursively define probabilities $p_{c,t}(v)$ for each $v$ in $V_c \backslash \{'none'\}$ as: 
+Recursively define probabilities $p_{c,t}(v)$ for each $v \in V_c \backslash \{'none'\}$ as: 
 \begin{align}
     \label{eqn:p_c_t}
     p_{c,t}(v) &=slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v) \\
@@ -266,7 +320,7 @@ Recursively define probabilities $p_{c,t}(v)$ for each $v$ in $V_c \backslash \{
     p_{c,t}('none') &= 1 - \sum_{v \in V_c \backslash \{'none'\}}p_{c,t}(v)
 \end{align}
 
-For a requestable slot $s$ define 
+For requestable slots $s$: 
 \begin{align}
     \label{eqn:p_s_t}
     p_{s,t} &= slu_{s,t} + (1 - slu_{s, t})\cdot p_{s,t-1} \\
@@ -279,7 +333,8 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
 \begin{proof}
     For goals(methods).
     Using method of mathematical induction for $t=0$: \\
-    From \ref{eqn:p_c_0} since $0 \leq slu_{c,t}(v) \leq 1 \implies $
+    From (\ref{eqn:p_c_0}) since $0 \leq slu_{c,t}(v) \leq 1 \implies $
+
     \begin{equation}
         \begin{aligned}
             0 \leq &p_{c,0}(v) \leq 1 \\
@@ -288,18 +343,22 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
     \end{equation}
 
     \noindent Assuming that probabilities are well-defined for $t = k-1$:
+
     \begin{equation}
         0 \leq p_{c,k-1}(v) \leq 1
     \end{equation} 
-    Since
+
+    \noindent Since
+
     \begin{equation}
         \begin{aligned}
             0 \leq slu_{c,k}(v) + slu_{c,k}('none') = 1 - \sum_{w \in V_{c} \backslash \{'none', v\}} slu_{c,k}(w) \leq 1
         \end{aligned}
     \end{equation}
-    and
-    $ slu_{c,k}(v) \geq 0 $,  $q_{c,k} \geq 0$, $p_{c,k-1}(v) \geq 0$
+
+    \noindent and $ slu_{c,k}(v) \geq 0 $,  $q_{c,k} \geq 0$, $p_{c,k-1}(v) \geq 0$
     then for $t=k$ we get
+
     \begin{equation}
         \begin{aligned}
             0 \leq p_{c, k}(v) \overset{
@@ -308,9 +367,10 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
                 }{=} slu_{c,k}(v) + q_{c,k} \cdot p_{c, k-1}(v) \leq 1
         \end{aligned}
     \end{equation}
-    As $p_{c, t}('none') \leq 1$ by definition (\ref{eqn:p_c_t_none}), we only need to prove it being $\geq 0$.\\
+
+    \noindent As $p_{c, t}('none') \leq 1$ by definition (\ref{eqn:p_c_t_none}), we only need to prove it being $\geq 0$.\\
     
-    \noindent Again by method of mathematical induction let's assume that for $t = k-1$ $p_{c, k-1}('none') \geq 0$ then for $t = k$
+    \noindent Again by method of mathematical induction assuming that for $t = k-1$ $p_{c, k-1}('none') \geq 0$ then for $t = k$:
 
     \begin{equation}
         \begin{aligned}
@@ -329,18 +389,21 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
         \end{aligned}
     \end{equation}
 
-    For requestable slots.\\
+    For requestable slots. \\
     
     Assuming that probabilities are well-defined for $t = k-1$:
+
     \begin{equation}
         0 \leq p_{s,k-1} \leq 1
     \end{equation}
     
-    Since
+    \noindent Since
     
     \begin{equation}
         0 \leq slu_{s,t} + (1 - slu_{s,t}) \leq 1
     \end{equation}
+
+    \noindent Therefore
 
     \begin{equation}
         0 \leq p_{s,t} \overset{\ref{eqn:p_s_t}}{=} slu_{s,t} + (1 - slu_{s,t}) \cdot p_{s,t-1} \leq 1
@@ -348,49 +411,50 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
 \end{proof}
 
 \subsection{Quality Evaluation}
-To evaluate a quality of a belief state tracker one can use a fraction of turns where a top dialogue state hypothesis was correct (accuracy) or use the following equa\-tion (\ref{l2}) where $p$ is a hypothesised distribution, $i$ is an index of a true label. 
+For quality evaluation one can use either a fraction of turns where a top dialogue state hypothesis was correct (accuracy) or alternatively:
 \begin{equation}
     L_2 = (1-p_i)^2 + \sum_{j \neq i} p_j^2
     \label{l2}
 \end{equation}
 
-In comparison to the simplest tracker focus tracker performs much better for informable slots. This is an expected behaviour as informable slot may change over time, and probabi\-lity of the slot being informable will also change. However for the requestable slot focus tracker doesn't show a better performance as usually the requestable slots should not change during the dialog, they are requested once and after that removed from the set of the requestable slots, after that the user can decide to request another one. The same applies for methods, performance there is similar to the baseline tracker as user only once "sets" by which method he wants to achieve the goal.
+\noindent
+where $p$ is a hypothesised distribution, $i$ is an index of a true label. 
 
-One can see the results for both trackers in Table \ref{focus_tracker_results} and Table \ref{baseline_tracker_results}.
-    \begin{table}[ht]
-        \centering
-        \begin{tabular}{|c c c c|}
-        \hline
-                    & Joint Goals & Requested & Method \\
-        \hline
-        Accuracy   & 0.73        & 0.92      & 0.68 \\ 
-        L2         & 0.42        & 0.12      & 0.58 \\
-        \hline
-        \end{tabular}
-        \caption{Focus Tracker}
-        \label{focus_tracker_results}
-    \end{table}
+Focus tracker in comparison to the simplest tracker performs much better for goals (sometimes called informable slots) as they may change over time, for. ex. user may ask for another pricerange or another restaurant area. However for requestable slots its performance is not better as these slots usually should not change during the dialog, they are requested once and after that removed from the set of the requestable slots, after that the user can decide to request another one. Similar for methods as the user usually "sets" by which method he will achieve the goal once (Table \ref{focus_tracker_results} and Table \ref{baseline_tracker_results}).
 
-    \begin{table}[ht]
-        \centering
-        \begin{tabular}{|c c c c|}
-        \hline
-                    & Joint Goals   & Requested & Method \\ 
-        \hline
-        Accuracy   & 0.57          & 0.91      & 0.68 \\ 
-        L2         & 0.83          & 0.12      & 0.58  \\
-        \hline
-        \end{tabular}
-        \caption{Simplest Tracker}
-        \label{baseline_tracker_results}
-    \end{table}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c c c c|}
+    \hline
+                & Joint Goals & Requested & Method \\
+    \hline
+    Accuracy   & 0.73        & 0.92      & 0.68 \\ 
+    L2         & 0.42        & 0.12      & 0.58 \\
+    \hline
+    \end{tabular}
+    \caption{Focus Tracker}
+    \label{focus_tracker_results}
+\end{table}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c c c c|}
+    \hline
+                & Joint Goals   & Requested & Method \\ 
+    \hline
+    Accuracy   & 0.57          & 0.91      & 0.68 \\ 
+    L2         & 0.83          & 0.12      & 0.58  \\
+    \hline
+    \end{tabular}
+    \caption{Simplest Tracker}
+    \label{baseline_tracker_results}
+\end{table}
 
 \subsection{Interesting Question}
-What happens to a probability when user gives an exact same utterance in
-the first two turns of the dialog?
+Assume user gives an exact same utterance in the first two turns of the dialog, what happens to a probability?
 
-In this case $slu(v) = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 2} = q$ for $\forall c \forall v \in V_c $
+$slu(v) = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 2} = q$ for $\forall c \forall v \in V_c $
 
+\noindent Then
 \begin{align*}
     &p_{c,2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) 
     \\
@@ -399,17 +463,17 @@ In this case $slu(v) = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 
     &p_{c, 2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) = slu(v)(1 + q_c) \geq p_{c,1}(v)
 \end{align*}
 
-$\Rightarrow$ probability of value $v$  for slot $c$ will grow $p_{c,2}(v) \geq p_{c,1}(v) \forall v \in V_c $
+\noindent $\Rightarrow$ probability of value $v$  for slot $c$ will grow $p_{c,2}(v) \geq p_{c,1}(v) \forall v \in V_c $
 
 \begin{align*}
     p_{c,2}('none') = 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,2}(v) \leq 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,1}(v)  = p_{c,1}('none')
 \end{align*}
 
-\noindent and the probability of value $none$ decreases.
-This makes an intuitie sense, if a user repeats a sentence an agen should increase a probability of the slots mentioned by him and descrease a probability of $none$ values as user definitely wants to pass to the agent some important information.
+\noindent Probability of value $none$ decreases.
+This is intuitive, with a sentence repetition an agent should increase a probability of the slots mentioned by user and descrease a probability of $none$ values as user definitely insist on some important information.
 
 \subsection{Another update rule}
-Let's define another update rule:
+Define an update rule:
 \begin{equation}
     p_{c,t}(v) = (1-q_{c,t})\cdot slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v)
 \end{equation}
@@ -427,22 +491,21 @@ for some $v$.
 
 What happens to probability $p_{c,1}(v)$?
 
-Since (\ref{eqn:q_c_0_1}) means that all probabilities were 0 for any $v$ apart from $none$, then $p_{c,0}(v) = 0$ for all $v \in V_c$. Then: 
+Since (\ref{eqn:q_c_0_1}) means that $p_c(v) = 0  \quad \forall v \in V_c\{'none'\} $, then: 
 \begin{align*}
     p_{c,1}(v) = (1 - 0.5) \cdot 0.5 + 0 = 0.25
 \end{align*}
 
-As the slot was not in the first turn and then appeared in the second turn with probability 0.5, then it is okay to assume that the the probability of it might be not 0.5 (as it would be in previous update rule) but 0.25. 
+As the slot was not in the first turn and then appeared in the second turn with probability 0.5, it is reasonable to assume that its probability might be not 0.5 (by previous update rule) but 0.25. 
 
-In general, such update rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a totally reasonable update. 
+In general, such update rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a reasonable update. 
 
 \newpage
 
-\section{Dialog state tracking as a reinforcement learning problem}
-Apart from tracking a state of a dialog, the agent must learn to perform the correct action. This is can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and might be penalised for the incorrect ones. Agent owns a policy (its behaviour) that it has to optimize, rewards from the environment, value function (prediction of the future reward given current state $b$) and a model of the environment.
+\section{Dialog optimisation as a reinforcement learning problem}
+Apart from tracking a state of a dialog, the agent must learn to perform correct actions. This can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and penalised for incorrect ones. Agent has a policy (its behaviour) that should be optimized, rewards from the environment, $V$-function (prediction of the future reward given current state $b$) and a model of environment.
 
-One also defines a Q-function, which determines how good it is to take action $a$ in belief state $b$ and then follow a policy $\pi$. Having an optimal Q-function one chooses an action that maximises its value, this will be an optimal action.
-
+$Q$-function is also defined to determines how good is it to take action $a$ in belief state $b$ and then follow a policy $\pi$. Having an optimal $Q$-function one can choose an optimal action.
 
 \begin{equation}
     Q_{\pi}(b, a) = \E[R_t| b_t = b, a_t = a]
@@ -460,23 +523,25 @@ Optimal policy is:
 \end{equation}
 
 
-\subsection{Why do to define a reward?}
+\subsection{Rewards}
+Reward is a measure of success of the policy for the dialog, without reward one cannot learn an optimal policy. By optimizing reward value one opti\-mizes the policy. It is a metric for the algorithm's success.
 
-Reward is a measure of success of the policy for the dialog, if we don’t have a reward, we cannot learn and define an optimal policy. With it we can define how we optimize the policy by optimizing the value of the reward. It is basically a metric for the algorithm's success.
+\subsection{Allowed actions for execution}
 
-\subsection{What actions can system execute?}
-
-Interesting trick for optimizing a training process is to explicitely define which actions are allowed for execution. An agent should be not allowed to execute those actions which are clearly impossible. For example, after user requests a restaurant's pnone number an agent should not be allowed to execute an action “say hello”. In order to implement that we can mask out with 0 those actions that are not allowed to be executed.
+For optimization one can restrict some actions to be executed as an agent should be not allowed to execute those actions which are clearly implausible. For example, after user requests a restaurant's address an agent should not say ``hello”. For that one can mask out with 0 those actions that are not allowed to be executed.
 
 \subsection{Monte-Carlo policy}
 
-Monte Carlo control algorithm is a method for finding the optimal policy for a reinforcement problem.
+Monte-Carlo control algorithm finds an optimal policy for a reinforcement learning problem.
 
-It is a tabular approach, which means that the belief state/summary space is discretised into a grid. In this algorithm the policy and the Q function are first defined randomly. Then we iterate over the dialogs with this polilcy. Throught this iteration we calculate the reward until the end of the dialog. For updating the state we choose the nearest state from the table and update the Q value and afterwards the policy with it, then in the next turn we will use an already updated policy. 
+It is a tabular approach, meaning that the belief state space is discretised into a grid. Following a random policy and $Q$-function one generates a dialog and rewards, which are iteratively used to update a $Q$-function and a policy afterwards. For updates the nearest state from the table is chosen (Figure \ref{fig:MCC}). 
 
-\begin{center}
+\begin{figure}[!h]
+    \centering
     \includegraphics[width=10cm]{MCC.png}
-\end{center}
+    \caption{}
+    \label{fig:MCC}
+\end{figure}
 
 
 \pagebreak
