@@ -548,33 +548,33 @@ It is a tabular approach, meaning that the belief state space is discretised int
 
 
 %===========================================================
-\section{Deep Q-Network}
+\section{Deep Q-Learning}
 
 %===========================================================
-\subsection{Q-Learning}
-Instead of keeping Q-values in a table, one can approximate a Q-function with a neural network (Q-network). It is a neural network that takes a state of a dialog as input and outputs Q-values for each possible action. An optimal Q-network obeys the following Bellman optimality equation: 
+\subsection{Q-Network}
+Instead of keeping Q-values in a table, one can approximate a Q-function with a neural network (Q-network). It takes a state of a dialog as input and outputs Q-values for each possible action. An optimal Q-network obeys the following Bellman optimality equation: 
 
 \[ Q^*(s,a) = \E [r + \gamma max_{a^\prime}Q(s^\prime,a^\prime)] \] 
 
-where $\gamma$ is a discount factor,  $r$ is an immediate reward and $\max_a Q(s',a)$ is the maximum Q-value of the next state. One uses Bellman equation to update the Q-function iteratively:
+where $\gamma$ is a discount factor,  $r$ is an immediate reward and $\max_a Q(s',a)$ is the maximum Q-value of the next state. Bellman equation is used to update the Q-function iteratively:
 
 \[Q_{i + 1} (s,a) \leftarrow \E[r + \gamma max_{a^\prime}Q_{i}(s^\prime,a^\prime)]\]
 
-With iterative updates it will converge to an optimal Q-function.
+\subsection{Results}
 
-In comparison to Monte-Carlo this approach this one is more efficient as it does not keep track of all the past states. Instead it only remembers the current one. This happens because only Q-value of the current state is used to calculate a Q-value of the next state. Monte-Carlo reaches the maximum success rate of TODO 76\% close to the 2000 dialogs, whereas Q-learning reaches the maximum success rate of 96\% after 2000 dialogs and has already 94\% after ~400 dialogs. The reward has almost doubled as well. 
+In comparison to Monte-Carlo this approach is more efficient as it does not keep track of all the past states and remembers only the current one, because only Q-value of the current state is used for the next step update. Q-Network trains faster and better then a Monte-Carlo approach (TODO 96\% vs. 76\% Figures \ref{fig:ex}, \ref{fig:mc}). 
 
-Two reasons for benefits of DQN over Monte-Caro are: experience replay and delayed Q-targets. For experience replay one stores tuples ${s, a, r, s^\prime}$ in the buffer, where $s^\prime$ is the following dialog state and samples batches from the it. Delayed targets allow to stabilize the network as we the target network’s parameters are not trained, but they are periodically synchronized with the parameters of the main Q-network. The loss funciton here is the difference between Q-value of the current state + current reward vs. Q-value of the next state:
+Two reasons for benefits of DQN over Monte-Caro are: experience replay and delayed Q-targets. For experience replay one stores tuples ${s, a, r, s^\prime}$ in the buffer, where $s^\prime$ is the following dialog state and samples batches from the it. Delayed targets allow to stabilize the network as we the target network’s parameters are not trained, but periodically synchronized with the main Q-network. Loss function:
 
 \[\L = \E_{(s, a, r, s^\prime) \sim D} [(Q_{target}(r,s^\prime) - Q(s, a))^2]\]
 
-where $Q_{target}(r, s^\prime) = r + \gamma max_{a}Q_{target}(s^\prime,a)$
+where 
 
-if $s^\prime$ is a terminal state, then $Q(s^\prime, a) = Q_{target}(s^\prime, a) = 0$ for every $a$.
+\[Q_{target}(r, s^\prime) = r + \gamma max_{a}Q_{target}(s^\prime,a)\]
 
-Additionally, we have trained a Q-network without experience replay. In this case reward was almost 3 times lower TODO (11.23 and 4.5) as well as the success rate. The variance has also increased and therefore the network became more unstable. One can see the results in Table TODO.
-
-\begin{center}
+Let's train a Q-network without experience replay. In this case reward was almost 3 times lower TODO (11.23 and 4.5 Figure \ref{fig:no-ex}, Table \ref{tab:replay-no-replay}). With increased variance the $Q$-network became more unstable.
+\begin{table}[!h]
+    \centering
     \begin{tabular}{||c c c c||} 
      \hline
       & Reward & Success & Turns \\ [0.5ex] 
@@ -584,58 +584,54 @@ Additionally, we have trained a Q-network without experience replay. In this cas
      No experience replay & 4.50 +- 2.04 & 69.00 +- 6.45 & 9.30 +- 0.94 \\
      \hline
     \end{tabular}
-\end{center}
-
-The same informations is presented also in the plots.
+    \caption{}
+    \label{tab:replay-no-replay}
+\end{table}
 
 TODO change images
 \begin{figure}[!htb]
     \minipage{0.32\textwidth}
       \includegraphics[width=\linewidth]{env2-CamRestaurants-experience.png}
       \caption{Experience Replay}
-    \endminipage\hfill
+      \label{fig:ex}
+      \endminipage\hfill
     \minipage{0.32\textwidth}
       \includegraphics[width=\linewidth]{env2-CamRestaurants-experience.png}
       \caption{No Experience Replay}
-    \endminipage\hfill
+      \label{fig:no-ex}
+      \endminipage\hfill
     \minipage{0.32\textwidth}%
       \includegraphics[width=\linewidth]{env2-CamRestaurants-mc.png}
       \caption{Monte-Carlo}
+      \label{fig:mc}
     \endminipage
 \end{figure}
 
-One can see that system sometimes is caught in the loop and keeps asking the same question over and over again. The reason might be that semantic decoder didn't work well and haven't recognised an imput correctly, so the systems continue to request more information. TODO get example
+\subsection{Chatting with a Q-network}
+Here are presented examples of dialogs conducted with a Q-network. System sometimes gets caught in the loop and keeps asking the same question. The reason might be that semantic decoder didn't work well and haven't recog\-nised an input correctly, so the system continues to request more information. TODO get example
 
-There was no instances in the dataset where the user would say "I don't care" regarding the price range, and we can see an example of how the dialog is ruined when we encounter such a case, compare dialog 1 vs dialog 2. TODO dialog number Usually such infinite loops may happen due to bad recognition of speech, however here the problem is hidden probably in the state tracker. 
-
+There was no instances in the dataset where the user wouldn't care which price range is there, and the dialog is ruined when this case is encountered (Dialog \ref{diag:with-price} vs Dialog \ref{diag:without-price}). This might happen due to insufficient semantic decoder knowledge and not enough of such samples in the database.
 
 \begin{figure}[!htb]
     \minipage{0.49\textwidth}
       \includegraphics[width=\linewidth]{with_price.png}
-      \caption{With price}
+      \caption{}
+      \label{diag:with-price}
     \endminipage\hfill
     \minipage{0.49\textwidth}%
       \includegraphics[width=\linewidth]{without_price.png}
-      \caption{Without price}
+      \caption{}
+      \label{diag:without-price}
     \endminipage
 \end{figure}
 
-Another noticable thing is that choice of value for one slot sometimes influences the dialog drastically even though the slot is not that relevant. For example, here in the dialog 3 we choose specific price in comparison with dialog 4 TODO check number where we are agreed to any price and that leads suddenly to an infinite loop. This might happen due to insufficient semantic decoder knowledge and not enough of such samples in the database.
-\begin{figure}[!htb]
-    \minipage{0.49\textwidth}
-      \includegraphics[width=\linewidth]{chinese_works.png}
-      \caption{Working sample}
-    \endminipage\hfill
-    \minipage{0.49\textwidth}%
-      \includegraphics[width=\linewidth]{chinese_no_work.png}
-      \caption{Not working sample}
-    \endminipage
-\end{figure}
-
-Examples with negations are performing poorly as well which is also most probably the failure of the semantic decoder (see dialog 5 TODO change).
+Examples with negations are performing poorly, most probably the failure of the semantic decoder not recognizing negation and not enough of negative samples in the database (Dialog \ref{diag:negation}).
 
 \begin{figure}
+    \centering
     \includegraphics[width=5cm]{chinese\ negation.png}
+    \caption{}
+    \label{diag:negation}
 \end{figure}
 
 
@@ -676,6 +672,9 @@ Here one can see the difference in training with information gain and without it
 One can also substitute $r = r + \nu r_i$. However one should be cautious --- if the value $\mu$ is too high, we push the sytem to gather more and more information and discourage it from making a choice and informing a user about it. 
 
 \pagebreak
+
+\section{Conclusion}
+
 \begin{thebibliography}{ccccc}
 \addcontentsline{toc}{section}{Literatur}
 
