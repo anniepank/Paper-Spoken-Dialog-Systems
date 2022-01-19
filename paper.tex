@@ -259,7 +259,7 @@ We can fix wrongly recognized ``pm" by adding ``in the evening".
 %===========================================================
 \pagebreak
 \section{Dialog state tracking}
-First task of dialog management module is to track a dialog state. Dialog state tracker remembers everything important that has happened in the dialog so far. Tracking problem can be solved with the use of Markov decision process (Figure \ref{MDP}).
+Dialog state tracker os a part of dialog management module and remembers everything important that has happened in the dialog so far. Markov decision process (Figure \ref{MDP}) might be applied for tracking problem.
 
 \begin{figure}[ht]
     \centering
@@ -268,11 +268,11 @@ First task of dialog management module is to track a dialog state. Dialog state 
     \label{MDP}
 \end{figure}
 
-Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) with 
+Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) of: 
 \begin{itemize}
-    \item Dialog states --- containing current important information about the dialog
+    \item Dialog states --- current important information
     \item Actions --- what system does
-    \item Rewards --- measures of the quality of the dialog so far
+    \item Rewards --- quality of the dialog so far
 \end{itemize}
 
 \begin{figure}[!htb]
@@ -288,29 +288,27 @@ Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) with
     \endminipage
 \end{figure}
 
-To introduce an uncertainty here, one can assume that observed utteran\-ces are dependent on hidden states, then the process is called then partially observable Markov process (Figure \ref{PartialMarkov}).
+One can assume that observed utteran\-ces are dependent on hidden states, then the process is called then partially observable Markov process (Figure \ref{PartialMarkov}).
 
 Dialogue state is a set of distributions for the next components: 
 \begin{itemize}
-    \item Goal --- for each slot a distribution over possible values
-    \item Method --- a distribution over possible methods
-    \item Requested slots --- for each requestable slot a binary distribution
+    \item Goal --- distribution over possible values (for each slot)
+    \item Method --- distribution over possible methods
+    \item Requested slots --- binary distribution (for each slot)
 \end{itemize}
 
 \subsection{Focus Tracker}
 
-The simplest tracker assigns a single hypothesis for each slot at each turn, a more advanced option is a focus tracker. It accumulates evidence of a changing state over the course of the dialogue. Here is defined how it tracks goals, methods, requestable slots. 
-
-Define for methods and goal components $c$ a quantity denoting that a slot or method is not present in turn $t$:
+The simplest tracker assigns a single hypothesis for each slot at each turn, whereas a focus tracker accumulates evidence of a changing state over the course of the dialogue. It works in the following way: define for methods, goal components $c$ a quantity denoting that a slot / method is not present in turn $t$:
 
 \begin{equation}
     \label{eqn:q_c_t}
     q_{c,t} := slu_{c,t}('none') = 1 - \sum_{v \in V_c \backslash \{'none'\}}slu_{c,t}(v)
 \end{equation}
 
-\noindent where $slu_c(v)$ is a probability of a given slot value $v$ for goal $c$ be\-ing a correct one, $V_c$ are all possible slot values.
+\noindent where $slu_c(v)$ --- a probability of a given slot value $v$ for goal $c$ be\-ing a correct one, $V_c$ --- all possible slot values.
 
-Recursively define probabilities $p_{c,t}(v)$ for each $v \in V_c \backslash \{'none'\}$ as: 
+Define $p_{c,t}(v)$ for each $v \in V_c \backslash \{'none'\}$ as: 
 \begin{align}
     \label{eqn:p_c_t}
     p_{c,t}(v) &=slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v) \\
@@ -328,7 +326,7 @@ For requestable slots $s$:
     p_{s,0} &= slu_{s,0}
 \end{align}
 
-Now let's prove that probabilities are well-defined, in other words that $0 \leq p_{c,t}(v) \leq 1$ $\forall v \in V_c, \forall t, \forall c$
+Let's prove that probabilities are well-defined, meaning that $0 \leq p_{c,t}(v) \leq 1$ $\forall v \in V_c, \forall t, \forall c$
 
 \begin{proof}
     For goals(methods).
@@ -342,7 +340,7 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
         \end{aligned}
     \end{equation}
 
-    \noindent Assuming that probabilities are well-defined for $t = k-1$:
+    \noindent Assuming that for $t = k-1$:
 
     \begin{equation}
         0 \leq p_{c,k-1}(v) \leq 1
@@ -357,7 +355,7 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
     \end{equation}
 
     \noindent and $ slu_{c,k}(v) \geq 0 $,  $q_{c,k} \geq 0$, $p_{c,k-1}(v) \geq 0$
-    then for $t=k$ we get
+    then for $t=k$:
 
     \begin{equation}
         \begin{aligned}
@@ -368,9 +366,9 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
         \end{aligned}
     \end{equation}
 
-    \noindent As $p_{c, t}('none') \leq 1$ by definition (\ref{eqn:p_c_t_none}), we only need to prove it being $\geq 0$.\\
+    \noindent As $p_{c, t}('none') \leq 1$ from (\ref{eqn:p_c_t_none}), let's prove $p_{c, t}('none') \geq 0$.\\
     
-    \noindent Again by method of mathematical induction assuming that for $t = k-1$ $p_{c, k-1}('none') \geq 0$ then for $t = k$:
+    \noindent By method of mathematical induction assuming that for $t = k-1$ $p_{c, k-1}('none') \geq 0$ then for $t = k$:
 
     \begin{equation}
         \begin{aligned}
@@ -391,7 +389,7 @@ Now let's prove that probabilities are well-defined, in other words that $0 \leq
 
     For requestable slots. \\
     
-    Assuming that probabilities are well-defined for $t = k-1$:
+    Assuming that for $t = k-1$:
 
     \begin{equation}
         0 \leq p_{s,k-1} \leq 1
@@ -420,7 +418,7 @@ For quality evaluation one can use either a fraction of turns where a top dialog
 \noindent
 where $p$ is a hypothesised distribution, $i$ is an index of a true label. 
 
-Focus tracker in comparison to the simplest tracker performs much better for goals (sometimes called informable slots) as they may change over time, for. ex. user may ask for another pricerange or another restaurant area. However for requestable slots its performance is not better as these slots usually should not change during the dialog, they are requested once and after that removed from the set of the requestable slots, after that the user can decide to request another one. Similar for methods as the user usually "sets" by which method he will achieve the goal once (Table \ref{focus_tracker_results} and Table \ref{baseline_tracker_results}).
+Focus tracker in comparison to the simplest tracker performs much better for goals (sometimes called informable slots) as they may change over time, for. ex. user may ask for another pricerange, location. However for request\-able slots its performance is not better as these slots usually should not change during the dialog, they are requested once, removed from the set, afterwards user can request next one. Similar for methods as the user usually "sets" by which method he will achieve the goal once (Table \ref{focus_tracker_results} and Table \ref{baseline_tracker_results}).
 
 \begin{table}[ht]
     \centering
@@ -463,21 +461,21 @@ $slu(v) = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 2} = q$ for $
     &p_{c, 2}(v) = slu_{c,2}(v) + q_c \cdot p_{c, 1}(v) = slu(v)(1 + q_c) \geq p_{c,1}(v)
 \end{align*}
 
-\noindent $\Rightarrow$ probability of value $v$  for slot $c$ will grow $p_{c,2}(v) \geq p_{c,1}(v) \forall v \in V_c $
+\noindent $\Rightarrow$ probability of value $v$  for slot $c$ increases $p_{c,2}(v) \geq p_{c,1}(v) \forall v \in V_c $
 
 \begin{align*}
     p_{c,2}('none') = 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,2}(v) \leq 1 - \sum_{v \in V_{c} \backslash \{'none'\}} p_{c,1}(v)  = p_{c,1}('none')
 \end{align*}
 
 \noindent Probability of value $none$ decreases.
-This is intuitive, with a sentence repetition an agent should increase a probability of the slots mentioned by user and descrease a probability of $none$ values as user definitely insist on some important information.
+This is intuitive --- by a repetition user insists on some important information and agent becomes more confident in mentioned values and less in value $none$.
 
 \subsection{Another update rule}
 Define an update rule:
 \begin{equation}
     p_{c,t}(v) = (1-q_{c,t})\cdot slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v)
 \end{equation}
-Assume we talked to the user for two turns and for an informable slot $c$ it holds that 
+Assume two turns of dialog happened and that for an informable slot $c$:
 \begin{equation}
     \label{eqn:q_c_0_1}
     q_{c, 0} = 1
@@ -491,18 +489,18 @@ for some $v$.
 
 What happens to probability $p_{c,1}(v)$?
 
-Since (\ref{eqn:q_c_0_1}) means that $p_c(v) = 0  \quad \forall v \in V_c\{'none'\} $, then: 
+Since (\ref{eqn:q_c_0_1}) $\Rightarrow$ $p_c(v) = 0  \quad \forall v \in V_c\{'none'\} $, then: 
 \begin{align*}
     p_{c,1}(v) = (1 - 0.5) \cdot 0.5 + 0 = 0.25
 \end{align*}
 
 As the slot was not in the first turn and then appeared in the second turn with probability 0.5, it is reasonable to assume that its probability might be not 0.5 (by previous update rule) but 0.25. 
 
-In general, such update rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also a reasonable update. 
+In general, such update rule puts less weight on the new probabilities from current turn and more weight on the previous turn, which is also reasonable. 
 
 \newpage
 
-\section{Dialog optimisation as a reinforcement learning problem}
+\section{Dialog optimisation as a reinforcement learn\-ing problem}
 Apart from tracking a state of a dialog, the agent must learn to perform correct actions. This can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and penalised for incorrect ones. Agent has a policy (its behaviour) that should be optimized, rewards from the environment, $V$-function (prediction of the future reward given current state $b$) and a model of environment.
 
 $Q$-function is also defined to determines how good is it to take action $a$ in belief state $b$ and then follow a policy $\pi$. Having an optimal $Q$-function one can choose an optimal action.
@@ -634,10 +632,11 @@ Examples with negations are performing poorly, most probably the failure of the 
     \label{diag:negation}
 \end{figure}
 
+\pagebreak
 
 \section{Information Gain}
 
-One can also substitute overall reward $r$ with $r = r + \nu r_i$, here $r_i$ is an additional intrinsic reward, and $\nu$ is a hyperparameter. This reward is called information gain and it measures how much additional information the system gets about user needs after one turn. Let action be of form $\{request, confirm,$ $select\}\_\xi$. Let $p_{\xi}$ and ${p_{\xi}}^\prime$ be belief distributions over possible values for $\xi$ in current and next belief state. Then the informa\-tion gain is the difference between these distributions with Jensen-Shannon divergence as a distance metric:
+One can also substitute overall reward $r$ with $r = r + \nu r_i$, here $r_i$ is an additional intrinsic reward, and $\nu$ is a hyperparameter. This reward is called information gain and it measures how much additional information the system gets about user needs after one turn. Let action be of form $\{request, confirm,$ $select\}\_\xi$, $p_{\xi}$ and ${p_{\xi}}^\prime$ --- belief distributions over possible values of $\xi$ in current and next belief state.  Informa\-tion gain then is the distance between these distributions measured by with Jensen-Shannon di\-vergence distance:
 
 \begin{equation}
     r_i(s, a, s\prime) =
@@ -654,9 +653,9 @@ where
     \end{aligned}
 \end{equation}
 
-When the distance is big enough (higher than a threshold) we add the information gain to a reward additionally. Reward will be added only when the action was of the form ${request, confirm, select}$. Intuitively it also doesn't make sense to calculate information gain for actions like $bye, inform$ as they do not provide any additonal information on user needs and therefore do not lead to the accomplishment of the dialog goal. It is very beneficial to use intrinsic rewards in addition as they encourage system to get as much useful information from users as possible, by requesting more information from them, selecting the most relevant one and confirming the choices.
+When distance is big enough (higher than a threshold) we add infor\-mation gain to the reward, but only when the action was of the form $\{request,$ $ confirm, select\}$. Intuitively it also doesn't make sense to calculate infor\-mation gain for actions like $bye, inform$ as they do not provide any additonal infor\-mation on user needs and therefore do not lead to the accomplishment of the dialog goal. It is beneficial to use intrinsic rewards in addition as they encourage system to get more useful information from users by requesting more from them, selecting the most relevant one information and confirming the choices.
 
-Here one can see the difference in training with information gain and without it. Information gain improves the speed of training in the beginning and slightly improves the overall performance from $96\%$  to $98.4\%$ (see Figure 7, 8).
+Here one can see the difference in training with information gain and without it. Information gain improves the speed of training and slightly improves an overall performance from $96\%$  to $98.4\%$ (see Figure 7, 8).
 
 \begin{figure}[!htb]
     \minipage{0.5\textwidth}
