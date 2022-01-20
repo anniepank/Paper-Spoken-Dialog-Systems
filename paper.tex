@@ -2,7 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
 \usepackage{amsfonts}
-\usepackage{babel}
+\usepackage[english]{babel}
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{amsthm}
@@ -65,7 +65,7 @@ A spoken dialogue system is a computer system that enables human computer intera
 A good spoken dialogue system is able to:
 \begin{itemize}
      \item understand a user
-     \item decide what to say back
+     \item decide what to answer
      \item conduct a conversation beyond simple voice commands or question answering
 \end{itemize}
 
@@ -82,7 +82,10 @@ System is usually split into separate modules with well-defined input and output
 
 \pagebreak
 \section{Semantic Decoding}
-Speech recogniser module of SLU translates speech into text and outputs a list of possible user utterances along with their probabilities (Figure \ref{fig:several}).
+Speech recogniser module of SLU translates speech into text and outputs a list of possible user utterances along with their probabilities using a hidden markov model (HMM) (Figure \ref{fig:several}).
+REFERENCE Gales, M. and Young, S. (2007).
+The application of hidden markov models in speech recognition.
+https://mi.eng.cam.ac.uk/~mjfg/mjfg_NOW.pdf 
 
 \begin{figure}[!h]
     \centering
@@ -126,12 +129,18 @@ can be translated into the sequence of tags:
 \begin{center}
     ["O", "O", "O", "O", "O", "B-fromloc.city\_name", "O", "B-toloc.city\_name", "B-round\_trip", "I-round\_trip", "B-departure\_date"]
 \end{center}
+REFERENCE https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44628.pdf
+Mesnil, G., Dauphin, Y., Yao, K., Bengio, Y., Deng, L., Hakkani-Tur, D., He, X., Heck, L., Tur, G., Yu, D., and Zweig, G. (2015).
+Using recurrent neural networks for slot filling in spoken language understanding.
+
 \begin{figure}[!h]
     \centering
     \includegraphics[width=0.91\linewidth]{training-2-2.png}
     \caption{}
     \label{fig:semantic-decoding-seq2seq}
 \end{figure}
+REFERENCE Tur, G., Deoras, A., and Hakkani-Tur, D. (2013).
+Semantic parsing using word confusion networks with conditional random fields.
 
 Model predicting a sequence of tags can be a simple RNN with two heads --- one for predicting the tags and another for predicting intent or conditional random fields (CRF) instead (Figure \ref{fig:semantic-decoding-seq2seq}).
 
@@ -669,23 +678,26 @@ One can also substitute $r = r + \nu r_i$. However one should be cautious --- if
 \pagebreak
 
 \section{Conclusion}
-This report gives a brief introduction to the construction of spoken dialog systems. It contains research on different approaches and algorithms used for end-to-end spoken dialog system, that are build via modular approach. Such system was built with the use of different deep learning approaches, all approaches for each of the modules were studied and compared, several dialogs were conducted with the system. The results of the study were described and presented.
+This report gives a brief introduction to the construction of spoken dialog systems. It contains research on different approaches and algorithms used for end-to-end spoken dialog system, that are build via modular approach. Such system was built with the use of different deep learning approaches, all approaches for each of the modules were studied and compared, several dialogs were conducted with the system. The results of the study were described and presente.
 
 \pagebreak
+
 \begin{thebibliography}{ccccc}
-\addcontentsline{toc}{section}{Literatur}
-
-%So kann eine eine Monographie zitieren:
-\bibitem{Arbarello et al 1985}
-E.\ Arbarello, M.\ Cornalba, P.\ Griffiths, J.\ Harris:
-Geometry of algebraic curves. I. 
-Springer, New York, 1985.
-
-%So kann man eine Originalarbeit zitieren:
-\bibitem{Shepherd-Barron 1997}
-N.\ Shepherd-Barron:
-Fano threefolds in positive characteristic.
-Compositio Math.\  105  (1997),  237--265.
-
+    \addcontentsline{toc}{section}{Literatur}
+    
+    %So kann eine eine Monographie zitieren:
+    \bibitem{Arbarello et al 1985}
+    E.\ Arbarello, M.\ Cornalba, P.\ Griffiths, J.\ Harris:
+    Geometry of algebraic curves. I. 
+    Springer, New York, 1985.
+    
+    %So kann man eine Originalarbeit zitieren:
+    \bibitem{Shepherd-Barron 1997}
+    N.\ Shepherd-Barron:
+    Fano threefolds in positive characteristic.
+    Compositio Math.\  105  (1997),  237--265.
+    
 \end{thebibliography}
+
+
 \end{document}
