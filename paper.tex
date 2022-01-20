@@ -9,6 +9,7 @@
 \usepackage{hyphenat}
 \usepackage{caption}
 \usepackage[numbers]{natbib}
+\usepackage[printonlyused,withpage]{acronym}
 
 \graphicspath{ {./images} }
 \DeclareMathOperator*{\E}{\mathbb{E}}
@@ -60,23 +61,25 @@ Lecturer: Prof.\ Dr.\ Milica Ga\v{s}i\'{c}
 \tableofcontents
 
 \pagebreak
-\section{Spoken Dialog Systems}
-A spoken dialogue system is a computer system that enables human computer interaction where primary input is speech --- voice assistants (Siri, Alexa, etc.), chatbots, and etc. \par
 
-A good spoken dialogue system is able to:
+\section{Spoken Dialog Systems}
+A spoken dialogue system (SDS) is a computer system that enables human computer interaction where primary input is speech --- voice assistants (Siri, Alexa, etc.), chatbots, and etc. \par
+
+A good SDS is able to:
 \begin{itemize}
      \item understand a user
      \item decide what to answer
      \item conduct a conversation beyond simple voice commands or question answering
 \end{itemize}
 
-Here only goal-oriented systems will be considered, where the scope of the conversation is usually limited to a specific domain with an ontology describing it.
+Here will be considered only goal-oriented SDSs, where the scope of the conversation is usually limited to a specific domain described by an ontology.
 
-System is usually split into separate modules with well-defined input and output, in each a machine learning algo\-rithm can be used (Figure \ref{fig:SDS-main}). Spoken language understanding (SLU) --- for detecting and encoding users' speech, Dialogue manage\-ment (DM) --- for tracking important imformation in the dialog and choosing correct answers, Spoken language gene\-ration (SLG) --- translating answers for a user into a speech. Modular approach has a downside of loosing information bet\-ween the modules, however ML approaches allow to consider a list of possible inputs with probabilities, and uncertainty gets propagated through the pipeline.
+System is usually split into separate modules \cite{Structure} with well-defined input and output. In each can be used a machine learning (ML) algo\-rithm (Figure \ref{fig:SDS-main}). Spoken language understanding (SLU) --- for detecting and encoding users' speech, Dialogue manage\-ment (DM) --- for tracking important imformation in the dialog and choosing correct answers, Spoken Language gene\-ration (SLG) --- translating answers into speech. However, such modular approach has a downside of loosing information bet\-ween the modules, luckily since ML approaches allow to consider a list of possible inputs with probabilities, and uncertainties get propagated through the pipeline.
 
 \begin{figure}[!h]
+    \centering
     \includegraphics[width=\linewidth]{SDS-main.png}
-    \caption{}
+    \caption{Modular spoken dialogue system}
     \label{fig:SDS-main}
 \end{figure}
 
@@ -88,10 +91,10 @@ Speech recogniser module of SLU translates speech into text and outputs a list o
 \begin{figure}[!h]
     \centering
     \includegraphics[width=0.65\linewidth]{uncertanty.png}
-    \caption{}
+    \caption{List of possible utterances from speech recogniser}
     \label{fig:several}
 \end{figure}
-The task of a sematic decoder module is to get the meaning from them by translating utterances into a set of sematic concepts (dia\-log acts). Dialog act consists of: 
+The task of a sematic decoder is to get the meaning from the utterances by translating them into a set of sematic concepts (dia\-log acts). Dialog act consists of: 
 
 \begin{itemize}
     \item intent / dialog act type
@@ -106,14 +109,14 @@ One approach would be to view semantic decoding as a classification task --- hav
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.8\linewidth]{training-2.png}
-    \caption{}
+    \caption{Semantic decoding as a classification task}
 \end{figure}
 
 Utterance can be represented as a fixed-size vector, where only informa\-tion on which and how many words are there is preserved. To add positional information one can use an n-gram model. Delexicalisation clusters special terms as $area$ or $food-type$ with the help of ontology. Then several SVMs are trained to classify possible dialog acts (Figure \ref{fig:semantic-decoding-classification}).
 
 \begin{figure}[h!]
     \includegraphics[width=0.998\textwidth]{semantic-decoding-classification.png}
-    \caption{}
+    \caption{Classification using SVM}
     \label{fig:semantic-decoding-classification}
 \end{figure}
 
@@ -123,34 +126,33 @@ Another approach is to view it as a seq-to-seq task ---  translating an utteranc
     ``i want to fly from Minsk to Kiev round trip tomorrow" 
 \end{center}
 
-can be translated into the sequence of tags: 
+can be translated into the sequence of tags \cite{IOB}: 
 \begin{center}
     ["O", "O", "O", "O", "O", "B-fromloc.city\_name", "O", "B-toloc.city\_name", "B-round\_trip", "I-round\_trip", "B-departure\_date"]
 \end{center}
-Using recurrent neural networks for slot filling in spoken language understanding.
 
+Such slot filling in SLU could be done by using recurrent neural networks (RNN) or word confusion networks with conditional random fields (CRF) \cite{CRF}.
 \begin{figure}[!h]
     \centering
     \includegraphics[width=0.91\linewidth]{training-2-2.png}
-    \caption{}
+    \caption{Classification using RNN or CRF}
     \label{fig:semantic-decoding-seq2seq}
 \end{figure}
 
-Semantic parsing using word confusion networks with conditional random fields.
+RNN \cite{SemanticFilling} can be a simple network with two heads --- one for predicting the tags and another for predicting intent (Figure \ref{fig:semantic-decoding-seq2seq}).
 
-Model predicting a sequence of tags can be a simple RNN \cite{SemanticFilling} with two heads --- one for predicting the tags and another for predicting intent or conditional random fields (CRF) \cite{CRF} instead (Figure \ref{fig:semantic-decoding-seq2seq}).
+\subsection{Evaluation of RNN Models}
 
-\subsection{Evaluation for RNN model}
-
-Having predictions from RNN the easiest mectric to calculate would be a f1-score on a slot level. One first collects slots from a predicted tags sequence:
+The easiest metric for RNN predictions evaluation would be a F1-score on a slot level. One first collects slots from a predicted tags sequence:
 \begin{center}
     input = [B-food-type\quad I\_food-type\quad O\quad B\_price-range\quad O] \\
+    translates into \\
     output = [(food-type, start=0, end=1), (price-range, start=3, end=3)]
 \end{center}
 
 Afterwards, having a set of true and predicted slots we can can calculate true posutives (TP), false positives (FP), false negatives (FN) on a slot level. Having these values one can calculate precision, recall and F1-score.
 
-The other way to evaluate a model is to calculate TP, FP, FN for each tag, without converting them to slots. After there are two options on how to average the metrics: on a macro level (Equation \ref{eq:precision_macro}) and in a micro level (Equation \ref{eq:precision_micro}. Recall and F1-score are calculated analogically.
+The other way to evaluate a model is to calculate TP, FP, FN for each tag, without converting them to slots. After there are two options on how to average the metrics: on a macro level (Equation \ref{eq:precision_macro}) and in a micro level (Equation \ref{eq:precision_micro}). Recall and F1-score are calculated analogically.
 
 \begin{equation}
     Precision = \frac{1}{N_{slots}} \times \sum_{s \in slots}{s_{Precision}}
@@ -162,7 +164,7 @@ The other way to evaluate a model is to calculate TP, FP, FN for each tag, witho
     \label{eq:precision_micro}
 \end{equation}
 
-Macro average was much lower than a micro average (Table \ref{RNNMetrics}), because there can be a lot of classes with only few instances which were not predicted or predicted wrongly while there are not so many classes with a lot of instances, which are therefore predicted correctly, therefore without weight\-ning by the number of samples (micro level) one gets a lower average.
+Macro average was much lower than a micro average (Table \ref{RNNMetrics}), because there can be a lot of classes with only few instances which were not predicted or predicted wrongly, while there are not so many classes with a lot of instances, which were predicted correctly, therefore without weight\-ning by the number of samples (micro level) one gets a lower average.
 
 \begin{table}[!h]
     \centering
@@ -177,11 +179,11 @@ Macro average was much lower than a micro average (Table \ref{RNNMetrics}), beca
         weighted average& 0.94      & 0.95   & 0.94 \\
         \hline
     \end{tabular}
-    \caption{}
+    \caption{RNN training results}
     \label{RNNMetrics}
 \end{table}
 
-Let's have a look on how the tags are recognised after training: 
+This is how tags were recognised after training: 
 \begin{center}
     \resizebox{\textwidth}{!}{
     \begin{tabular}{ c c c c c c c c c c c c c }
@@ -193,7 +195,7 @@ Let's have a look on how the tags are recognised after training:
     \end{tabular}}
 \end{center}
 
-We can fix it by adding words ``with a stop in".
+This prediction was a bit off, one can fix it by adding words ``with a stop in".
 \begin{center}
     \resizebox{\textwidth}{!}{
     \begin{tabular}{ c c c c c c c c c c c c c c}
@@ -256,16 +258,16 @@ $arrive\_time$ can be mistaken with $depart\_time$:
     \end{tabular}}
 \end{center}
 
-We can fix wrongly recognized ``pm" by adding ``in the evening".
+One can fix wrongly recognized ``pm" by adding ``in the evening".
 %===========================================================
 \pagebreak
-\section{Dialog state tracking}
-Dialog state tracker os a part of dialog management module and remembers everything important that has happened in the dialog so far. Markov decision process (Figure \ref{MDP}) might be applied for tracking problem.
+\section{Dialog State Tracking}
+Dialog state tracker (DST) is a part of DM module and remembers everything important that has happened in the dialog so far. Markov decision process (MDP) (Figure \ref{MDP}) might be applied for DST problem.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.8\linewidth]{training-state-tr-1.png}
-    \caption{}
+    \caption{DST as a Markov decision process}
     \label{MDP}
 \end{figure}
 
@@ -289,9 +291,9 @@ Process is represented as a dynamic Bayesian network (Figure \ref{Markov}) of:
     \endminipage
 \end{figure}
 
-One can assume that observed utteran\-ces are dependent on hidden states, then the process is called then partially observable Markov process (Figure \ref{PartialMarkov}).
+One can assume that observed utteran\-ces are dependent on hidden states, then the process is called then partially observable MDP (Figure \ref{PartialMarkov}).
 
-Dialogue state is a set of distributions for the next components: 
+Dialogue state is a set of distributions for the next components \cite{DST}: 
 \begin{itemize}
     \item Goal --- distribution over possible values (for each slot)
     \item Method --- distribution over possible methods
@@ -300,7 +302,7 @@ Dialogue state is a set of distributions for the next components:
 
 \subsection{Focus Tracker}
 
-The simplest tracker assigns a single hypothesis for each slot at each turn, whereas a focus tracker accumulates evidence of a changing state over the course of the dialogue. It works in the following way: define for methods, goal components $c$ a quantity denoting that a slot / method is not present in turn $t$:
+The simplest tracker assigns a single hypothesis for each slot at each turn \cite{DST}, whereas a focus tracker accumulates evidence of a changing state over the course of the dialogue. It works in the following way: define for methods, goal components $c$ a quantity denoting that a slot / method is not present in turn $t$:
 
 \begin{equation}
     \label{eqn:q_c_t}
@@ -410,7 +412,7 @@ Let's prove that probabilities are well-defined, meaning that $0 \leq p_{c,t}(v)
 \end{proof}
 
 \subsection{Quality Evaluation}
-For quality evaluation one can use either a fraction of turns where a top dialogue state hypothesis was correct (accuracy) or alternatively:
+For quality evaluation one can use either a fraction of turns where a top dialogue state hypothesis was correct (accuracy) or alternatively \cite{DST}:
 \begin{equation}
     L_2 = (1-p_i)^2 + \sum_{j \neq i} p_j^2
     \label{l2}
@@ -471,7 +473,7 @@ $slu(v) = slu_{c, 1}(v) = slu_{c,2}(v) \Rightarrow q_{c,1} = q_{c, 2} = q$ for $
 \noindent Probability of value $none$ decreases.
 This is intuitive --- by a repetition user insists on some important information and agent becomes more confident in mentioned values and less in value $none$.
 
-\subsection{Another update rule}
+\subsection{Another Update Rule}
 Define an update rule:
 \begin{equation}
     p_{c,t}(v) = (1-q_{c,t})\cdot slu_{c,t}(v) + q_{c,t} \cdot p_{c,t-1}(v)
@@ -501,19 +503,19 @@ In general, such update rule puts less weight on the new probabilities from curr
 
 \newpage
 
-\section{Dialog optimisation as a reinforcement learn\-ing problem}
-Apart from tracking a state of a dialog, the agent must learn to perform correct actions. This can be viewed as a reinforcement learning problem, where the agent is rewarded for performing correct actions and penalised for incorrect ones. Agent has a policy (its behaviour) that should be optimized, rewards from the environment, $V$-function (prediction of the future reward given current state $b$) and a model of environment.
+\section{Dialog Optimisation as a Reinforcement Learn\-ing Problem}
+Apart from DST problem, the agent must learn to execute correct actions. This can be viewed as a reinforcement learning (RL) problem, where the agent is rewarded for performing correct actions and penalised for incorrect ones. Agent has a policy (its behaviour) that should be optimized, rewards from the environment, $V$-function (prediction of the future reward given current state $b$) and a model of environment sometimes.
 
-$Q$-function is also defined to determines how good is it to take action $a$ in belief state $b$ and then follow a policy $\pi$. Having an optimal $Q$-function one can choose an optimal action.
+$Q$-function is also defined to determine how good is it to take action $a$ in belief state $b$ and then follow a policy $\pi$. Having an optimal $Q$-function one can choose an optimal action.
 
 \begin{equation}
     Q_{\pi}(b, a) = \E[R_t| b_t = b, a_t = a]
 \end{equation}
 
-The optimal value of Q is:
+The optimal value of Q is \cite{Sutton1998}:
 \begin{align}
     &V_{*}(b) = max_{\pi}V_{\pi}(b) \\
-    &Q_{*}(b, a) = max_{\pi}Q_{\pi}(b, a) = \E[r_{t+1} + \gamma * V_{*}(b_{t+1})| b_t = b, a_t = a]
+    &Q_{*}(b, a) = max_{\pi}Q_{\pi}(b, a) = \E[r_{t+1} + \gamma * V_{*}(b_{t+1})| b_t = b, a_t = a] 
 \end{align}
 
 Optimal policy is: 
@@ -525,27 +527,25 @@ Optimal policy is:
 \subsection{Rewards}
 Reward is a measure of success of the policy for the dialog, without reward one cannot learn an optimal policy. By optimizing reward value one opti\-mizes the policy. It is a metric for the algorithm's success.
 
-\subsection{Allowed actions for execution}
+\subsection{Actions Allowed for Execution}
 
-For optimization one can restrict some actions to be executed as an agent should be not allowed to execute those actions which are clearly implausible. For example, after user requests a restaurant's address an agent should not say ``hello”. For that one can mask out with 0 those actions that are not allowed to be executed.
+For optimization one can restrict some actions to be executed as agent should be not allowed to execute those actions which are clearly implausible. For example, after user requests a restaurant's address an agent should not say ``hello”. For that one can mask out with 0 those actions that are not allowed to be executed.
 
-\subsection{Monte-Carlo policy}
+\subsection{Monte-Carlo Policy}
 
-Monte-Carlo control algorithm finds an optimal policy for a reinforcement learning problem.
+Monte-Carlo control (MCC) algorithm \cite{Sutton1998} finds an optimal policy for a RL problem.
 
 It is a tabular approach, meaning that the belief state space is discretised into a grid. Following a random policy and $Q$-function one generates a dialog and rewards, which are iteratively used to update a $Q$-function and a policy afterwards. For updates the nearest state from the table is chosen (Figure \ref{fig:MCC}). 
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=10cm]{MCC.png}
-    \caption{}
+    \includegraphics[width=12cm]{MCC.png}
+    \caption{Monte Carlo Control algorithm \cite{Sutton1998}}
     \label{fig:MCC}
 \end{figure}
 
 
 \pagebreak
-
-
 %===========================================================
 \section{Deep Q-Learning}
 
@@ -555,15 +555,15 @@ Instead of keeping Q-values in a table, one can approximate a Q-function with a 
 
 \[ Q^*(s,a) = \E [r + \gamma max_{a^\prime}Q(s^\prime,a^\prime)] \] 
 
-where $\gamma$ is a discount factor,  $r$ is an immediate reward and $\max_a Q(s',a)$ is the maximum Q-value of the next state. Bellman equation is used to update the Q-function iteratively:
+\noindent where $\gamma$ is a discount factor,  $r$ is an immediate reward and $\max_a Q(s',a)$ is the maximum Q-value of the next state. Bellman equation is used to update the Q-function iteratively \cite{DQN}:
 
 \[Q_{i + 1} (s,a) \leftarrow \E[r + \gamma max_{a^\prime}Q_{i}(s^\prime,a^\prime)]\]
 
 \subsection{Results}
 
-In comparison to Monte-Carlo this approach is more efficient as it does not keep track of all the past states and remembers only the current one, because only Q-value of the current state is used for the next step update. Q-Network trains faster and better then a Monte-Carlo approach (TODO 96\% vs. 76\% Figures \ref{fig:ex}, \ref{fig:mc}). 
+In comparison to MCC this approach is more efficient as it does not keep track of all the past states and remembers only the current one, because only Q-value of the current state is used for the next step update. Q-Network trains faster and better than a MCC approach (96\% vs. 76\% Figure \ref{fig:ex-no-mc}). 
 
-Two reasons for benefits of DQN over Monte-Caro are: experience replay and delayed Q-targets. For experience replay one stores tuples ${s, a, r, s^\prime}$ in the buffer, where $s^\prime$ is the following dialog state and samples batches from the it. Delayed targets allow to stabilize the network as we the target network’s parameters are not trained, but periodically synchronized with the main Q-network. Loss function:
+Two reasons for benefits of DQN over MCC are: experience replay and delayed Q-targets \cite{DQN}. For experience replay one stores tuples ${s, a, r, s^\prime}$ in the buffer, where $s^\prime$ is the following dialog state and samples batches from the it. Delayed targets allow to stabilize the network as we the target network’s parameters are not trained, but periodically synchronized with the main Q-network. Loss function:
 
 \[\L = \E_{(s, a, r, s^\prime) \sim D} [(Q_{target}(r,s^\prime) - Q(s, a))^2]\]
 
@@ -571,47 +571,46 @@ where
 
 \[Q_{target}(r, s^\prime) = r + \gamma max_{a}Q_{target}(s^\prime,a)\]
 
-Let's train a Q-network without experience replay. In this case reward was almost 3 times lower TODO (11.23 and 4.5 Figure \ref{fig:no-ex}, Table \ref{tab:replay-no-replay}). With increased variance the $Q$-network became more unstable.
+Additionally Q-network was trained without experience replay. In this case reward was almost 3 times lower -- 11.23 vs. 4.5 (Figure \ref{fig:ex-no-mc}, Table \ref{tab:replay-no-replay}). With increased variance the $Q$-network became more unstable.
 \begin{table}[!h]
     \centering
     \begin{tabular}{||c c c c||} 
      \hline
       & Reward & Success & Turns \\ [0.5ex] 
      \hline\hline
-     Experience replay & TODO 11.23 +- 0.97 & 93.00 +- 3.56 & 7.37 +- 0.53 \\ 
+     Experience replay & 11.23 +- 0.97 & 93.00 +- 3.56 & 7.37 +- 0.53 \\ 
      \hline
      No experience replay & 4.50 +- 2.04 & 69.00 +- 6.45 & 9.30 +- 0.94 \\
      \hline
+     Monte-Carlo & 7.07 +- 1.48 & 76.00 +- 5.96 & 8.13 +- 0.61 \\
+     \hline
     \end{tabular}
-    \caption{}
+    \caption{Results of DQN training}
     \label{tab:replay-no-replay}
 \end{table}
 
-TODO change images
 \begin{figure}[!htb]
-    \minipage{0.32\textwidth}
-      \includegraphics[width=\linewidth]{env2-CamRestaurants-experience.png}
-      \caption{Experience Replay}
-      \label{fig:ex}
-      \endminipage\hfill
-    \minipage{0.32\textwidth}
-      \includegraphics[width=\linewidth]{env2-CamRestaurants-experience.png}
-      \caption{No Experience Replay}
-      \label{fig:no-ex}
-      \endminipage\hfill
-    \minipage{0.32\textwidth}%
-      \includegraphics[width=\linewidth]{env2-CamRestaurants-mc.png}
-      \caption{Monte-Carlo}
-      \label{fig:mc}
-    \endminipage
+    \centering
+    \includegraphics[width=\linewidth]{ex-no-mc.png}
+    \caption{DQN,\quad DQN without Experience Replay,\quad MCC}
+    \label{fig:ex-no-mc}
 \end{figure}
 
 \subsection{Chatting with a Q-network}
-Here are presented examples of dialogs conducted with a Q-network. System sometimes gets caught in the loop and keeps asking the same question. The reason might be that semantic decoder didn't work well and haven't recog\-nised an input correctly, so the system continues to request more information. TODO get example
-
-There was no instances in the dataset where the user wouldn't care which price range is there, and the dialog is ruined when this case is encountered (Dialog \ref{diag:with-price} vs Dialog \ref{diag:without-price}). This might happen due to insufficient semantic decoder knowledge and not enough of such samples in the database.
+Here are presented examples of dialogs conducted with a Q-network. System sometimes gets caught in the loop and keeps asking the same question. The reason might be malfunction of a semantic decoder with wrong inpure recognition and therefore system continues to request more information.
 
 \begin{figure}[!htb]
+    \renewcommand\figurename{Dialog}
+    \centering
+    \includegraphics[width=10cm]{infinite\ loop.png}
+    \caption{Infinite Loop in the dialog}
+    \label{diag:loop}
+\end{figure}
+
+There were no instances in the dataset where user wouldn't care about the price range, and the dialog gets ruined when such case is encountered (Dialog \ref{diag:with-price} vs Dialog \ref{diag:without-price}). This might happen due to insufficient semantic decoder knowledge and not enough of such samples in the database.
+
+\begin{figure}[!htb]
+    \renewcommand\figurename{Dialog}
     \minipage{0.49\textwidth}
       \includegraphics[width=\linewidth]{with_price.png}
       \caption{}
@@ -626,18 +625,18 @@ There was no instances in the dataset where the user wouldn't care which price r
 
 Examples with negations are performing poorly, most probably the failure of the semantic decoder not recognizing negation and not enough of negative samples in the database (Dialog \ref{diag:negation}).
 
-\begin{figure}
+\begin{figure}[!htb]
+    \renewcommand\figurename{Dialog}
     \centering
-    \includegraphics[width=5cm]{chinese\ negation.png}
+    \includegraphics[width=10cm]{chinese\ negation.png}
     \caption{}
     \label{diag:negation}
 \end{figure}
 
 \pagebreak
-
 \section{Information Gain}
 
-One can also substitute overall reward $r$ with $r = r + \nu r_i$, here $r_i$ is an additional intrinsic reward, and $\nu$ is a hyperparameter. This reward is called information gain and it measures how much additional information the system gets about user needs after one turn. Let action be of form $\{request, confirm,$ $select\}\_\xi$, $p_{\xi}$ and ${p_{\xi}}^\prime$ --- belief distributions over possible values of $\xi$ in current and next belief state.  Informa\-tion gain then is the distance between these distributions measured by with Jensen-Shannon di\-vergence distance:
+One can also substitute overall reward $r$ with $r = r + \nu r_i$, here $r_i$ is an additional intrinsic reward, and $\nu$ is a hyperparameter. This reward is called information gain (IG) and it measures how much additional information the system gets about user needs after one turn. Let action be of form $\{request,$  $confirm,$ $select\}\_\xi$, $p_{\xi}$ and ${p_{\xi}}^\prime$ --- belief distributions over possible values of $\xi$ in current and next belief state. IG is the distance between these distributions measured by with Jensen-Shannon di\-vergence distance:
 
 \begin{equation}
     r_i(s, a, s\prime) =
@@ -654,31 +653,29 @@ where
     \end{aligned}
 \end{equation}
 
-When distance is big enough (higher than a threshold) we add infor\-mation gain to the reward, but only when the action was of the form $\{request,$ $ confirm, select\}$. Intuitively it also doesn't make sense to calculate infor\-mation gain for actions like $bye, inform$ as they do not provide any additonal infor\-mation on user needs and therefore do not lead to the accomplishment of the dialog goal. It is beneficial to use intrinsic rewards in addition as they encourage system to get more useful information from users by requesting more from them, selecting the most relevant one information and confirming the choices.
+When distance is big enough (higher than a threshold) we add IG to the reward, but only when the action was of the form $\{request,$ $ confirm, select\}$. Intuitively it also doesn't make sense to calculate IG for actions like $bye,$ $inform$ as they do not provide any additonal infor\-mation on user needs and therefore do not lead to the accomplishment of the dialog goal. It is beneficial to use intrinsic rewards in addition as they encourage system to get more useful information from users by requesting more from them, selecting the most relevant one information and confirming the choices.
 
-Here one can see the difference in training with information gain and without it. Information gain improves the speed of training and slightly improves an overall performance from $96\%$  to $98.4\%$ (see Figure 7, 8).
+Here one can see the difference in training with IG and without it. IG improves the speed of training and slightly improves an overall performance from $96\%$  to $98.4\%$ (see Figure 7, 8).
 
 \begin{figure}[!htb]
     \minipage{0.5\textwidth}
       \includegraphics[width=\linewidth]{env3-ig-CamRestaurants.png}
-      \caption{Information Gain}
+      \caption{Information gain}
     \endminipage\hfill
     \minipage{0.5\textwidth}
       \includegraphics[width=\linewidth]{env3-CamRestaurants.png}
-      \caption{No Information Gain}
+      \caption{No information gain}
     \endminipage
 \end{figure}
 
-One can also substitute $r = r + \nu r_i$. However one should be cautious --- if the value $\mu$ is too high, we push the sytem to gather more and more information and discourage it from making a choice and informing a user about it. 
+One can also substitute $r = r + \nu r_i$. However it should be done cautious --- if the value $\mu$ is too high, the sytem is pushed to gather more and more information and is discouraged from making a choice and informing a user about it. 
 
 \pagebreak
 
 \section{Conclusion}
-This report gives a brief introduction to the construction of spoken dialog systems. It contains research on different approaches and algorithms used for end-to-end spoken dialog system, that are build via modular approach. Such system was built with the use of different deep learning approaches, all approaches for each of the modules were studied and compared, several dialogs were conducted with the system. The results of the study were described and presented.
+This report gives a brief introduction to the construction of spoken dialog systems. It contains research on different approaches and algorithms used for systems, that are build via modular approach. One such system was built with the use of different deep learning approaches, all approaches for each of the modules were studied and compared, several dialogs were conducted with the system. The results of the study were described and presented.
 
 \pagebreak
-
-
 
 \bibliography{refs} 
 \bibliographystyle{plainnat}
